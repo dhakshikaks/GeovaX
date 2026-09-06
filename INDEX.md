@@ -12,11 +12,11 @@ are no synthetic features anywhere in the corpus, the evaluation or the demo.
 
 | # | File | What it is |
 |---|---|---|
-| 1 | **`geovax-demo.html`** | **Double-click it.** The jury demo: a real run, inlined into one file, no server, no install. Click any parcel or building to see its sources, conflicts and six-dimension confidence. |
-| 2 | `GEOVAX_PS26013.pdf` / `.pptx` | The 15-slide pitch deck. PDF for reading, PPTX to edit. |
+| 1 | **`Jury/geovax-demo.html`** | **Double-click it.** The jury demo: a real run, inlined into one file, no server, no install. Click any parcel or building to see its sources, conflicts and six-dimension confidence. |
+| 2 | `Deck/SIH 2026 - 26013.pptx` | The 7-slide SIH idea-submission deck. Fixed-layout PDF in `Deck/PS26013-Presentation/`. |
 | 3 | `README.md` | The one-page argument: the result first, then the problem, then what is built. |
 | 4 | `docs/08-evaluation-results.md` | Every measured number — **and what the evaluation does not establish.** |
-| 5 | `geovax-source.tar.gz` | The whole platform: ~12,700 lines of Python, 30 modules, 81 passing tests. |
+| 5 | `archive/geovax-source.tar.gz` | The whole platform: ~12,700 lines of Python, 30 modules, 81 passing tests. |
 
 ---
 
@@ -50,15 +50,17 @@ A platform that reported this data as fine would be more impressive and less use
 
 ### Deliverable 1 — jury demo prototype
 
-- **`geovax-demo.html`** — self-contained console. Real harmonised parcels and buildings
+- **`Jury/geovax-demo.html`** — self-contained console. Real harmonised parcels and buildings
   from the run, the live adjudication queue with the platform's own reasoning, per-village and
   per-ward quality, the full 12-stage run record with the ledger's Merkle root, and the change
   histogram. Opens offline in any browser; nothing is fetched.
 
 ### Deliverable 2 — pitch deck / idea submission
 
-- **`GEOVAX_PS26013.pptx`** — 15 slides, editable.
-- **`GEOVAX_PS26013.pdf`** — the same deck, fixed layout.
+- **`Deck/SIH 2026 - 26013.pptx`** — 7 slides, editable, on the SIH 2026 template.
+- **`Deck/PS26013-Presentation/SIH 2026 - PS26013.pdf`** — the same deck, fixed layout.
+- **`Deck/PS/`** — the problem statement as issued. **`Deck/Reports/`** — conformance / evidence reports.
+- `archive/SAMANVAY_PS26013.pptx` / `.pdf` — the superseded 15-slide deck, kept for reference.
 
 ### Deliverable 3 — architecture and solution document
 
@@ -79,10 +81,10 @@ A platform that reported this data as fine would be more impressive and less use
 
 ### Deliverable 4 — working codebase
 
-- **`geovax-source.tar.gz`** — the complete repository.
+- **`archive/geovax-source.tar.gz`** — the complete repository (working tree also in `samanvay/`).
 
 ```bash
-tar xzf geovax-source.tar.gz && cd geovax
+tar xzf archive/geovax-source.tar.gz && cd geovax
 make setup      # dependencies + PostGIS schema
 make data       # fetch the real corpus (~2.1 GB), clip to the AOI, checksum it
 make pipeline   # run the 12-stage harmonisation DAG   (~18 min on 2 vCPU)
@@ -98,10 +100,10 @@ make test       # 81 tests
 
 | Archive | Contents |
 |---|---|
-| `geovax-results.tar.gz` | `metrics.json` (the full run record), `lod1_report.json`, `ledger.jsonl` (hash-chained provenance), `adjudication_queue.json` + `.geojson`, `changes.json`, `harmonised_parcels.geojson` |
-| `geovax-buildings.tar.gz` | `harmonised_buildings.geojson` — 92,560 harmonised footprints |
-| `geovax-lod1-cityjson.tar.gz` | `city_model_lod1.city.json` — CityGML LOD1 solids as CityJSON 1.1 |
-| `geovax-raster-terrain.tar.gz` | Terrain (DSM→DTM→nDSM) and ORI / co-registration reports |
+| `outputs/geovax-results.tar.gz` | `metrics.json` (the full run record), `lod1_report.json`, `ledger.jsonl` (hash-chained provenance), `adjudication_queue.json` + `.geojson`, `changes.json`, `harmonised_parcels.geojson` |
+| `outputs/geovax-buildings.tar.gz` | `harmonised_buildings.geojson` — 92,560 harmonised footprints |
+| `outputs/geovax-lod1-cityjson.tar.gz` | `city_model_lod1.city.json` — CityGML LOD1 solids as CityJSON 1.1 |
+| `outputs/geovax-raster-terrain.tar.gz` | Terrain (DSM→DTM→nDSM) and ORI / co-registration reports |
 
 Verify the provenance ledger yourself, without trusting anything here:
 
