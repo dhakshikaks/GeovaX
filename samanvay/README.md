@@ -184,6 +184,7 @@ make test        # 81 tests
 | [`07-security-governance.md`](docs/07-security-governance.md) | Threat model, DPDP handling, ledger integrity, and what the platform refuses to assert |
 | [`08-evaluation-results.md`](docs/08-evaluation-results.md) | Every measured number, and what the evaluation does not establish |
 | [`09-roadmap.md`](docs/09-roadmap.md) | Built vs designed-not-built, what a deployment needs next, and what would make it fail |
+| [`10-digital-twin-evidence-timeline.md`](docs/10-digital-twin-evidence-timeline.md) | The Land Digital Twin, Explainable AI Evidence and Temporal Land Intelligence views: what's real, what's derived, and the disclosed gaps |
 
 ---
 

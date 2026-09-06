@@ -44,6 +44,7 @@ from ..cadastre.fmb import generate_fmb, to_collabland_xml, to_fmb_svg
 from ..analytics.litigation import build_litigation_hotspots, calculate_litigation_risk
 from .auth import Role, UserClaims, USER_DIRECTORY, get_current_user, require_roles, sign_token
 from .services import KafkaEventBus, SubscriptionRegistry, cache_service, kafka_bus, opensearch_service
+from . import twin
 from ..geoai.sam_extractor import SAMFeatureExtractor
 
 logger = logging.getLogger(__name__)
@@ -979,17 +980,8 @@ def create_app(out_dir: str = "out/chennai_metro") -> FastAPI:
         package, so the enrichment degrades gracefully (LayerSpec fields alone) rather than
         failing the endpoint if it isn't importable from wherever this process happens to run.
         """
-        from ..pipeline.presets import AOIS, default_layers
-
-        # Reflect whichever AOI this store's out_dir was actually run over (real metrics.json),
-        # not a hardcoded "core" — otherwise this would misreport the tight Chennai Central
-        # bbox while the server is actually serving the wider metro-corridor run.
-        real_metrics = store.metrics()
-        real_aoi = real_metrics.get("aoi") if isinstance(real_metrics, dict) else None
-        if real_aoi and real_aoi.get("name") and real_aoi.get("bbox"):
-            aoi_name, aoi_bbox = real_aoi["name"], real_aoi["bbox"]
-        else:
-            aoi_name, aoi_bbox = AOIS["core"]
+        aoi_name, aoi_bbox = _real_aoi(store)
+        entries = _real_provenance_entries(store)
         catalogue: dict[str, Any] = {}
         try:
             from data_acquisition.sources import CATALOGUE  # type: ignore
@@ -997,29 +989,6 @@ def create_app(out_dir: str = "out/chennai_metro") -> FastAPI:
         except ImportError:
             pass
 
-        entries = []
-        for layer in default_layers(data_dir=""):
-            cat = catalogue.get(layer.dataset_id.lower())
-            entries.append({
-                "dataset_id": layer.dataset_id,
-                "feature_class": layer.feature_class.value if hasattr(layer.feature_class, "value") else str(layer.feature_class),
-                "source_type": layer.source_type.value if hasattr(layer.source_type, "value") else str(layer.source_type),
-                "authority": layer.authority,
-                "authority_full_name": cat.authority_name if cat else layer.authority,
-                "licence": layer.licence,
-                "accuracy_m": layer.accuracy_m,
-                "vintage": layer.vintage,
-                "tier": layer.tier,
-                "platform": layer.platform,
-                "original_format": layer.original_format,
-                "coverage": layer.coverage,
-                "transformation": layer.transformation,
-                "official_url": cat.url if cat else None,
-                "upstream": cat.upstream if cat else None,
-                "notes": cat.notes if cat else None,
-                "requires_credentials": cat.requires_credentials if cat else False,
-                "crs": cat.crs if cat else None,
-            })
         # The full acquisition catalogue (every SIH-required data category this project has
         # actually researched a real government/open-data source for — not just the 4 layers
         # this particular AOI run harmonises), each with an honest, disk-checked integration
@@ -1093,6 +1062,46 @@ def create_app(out_dir: str = "out/chennai_metro") -> FastAPI:
             "chain_message": msg,
             "merkle_root": store.ledger.merkle_root(),
         }
+
+    @app.get("/api/twin/{ulpin}", tags=["platform"])
+    def digital_twin(ulpin: str) -> dict[str, Any]:
+        """The Land Digital Twin: one parcel's ULPIN identity, its linked buildings, and
+        every source dataset that contributed to either, with the real authority/licence/
+        CRS/accuracy/transformation provenance behind each — assembled entirely from this
+        run's published collections and provenance catalogue. See `api/twin.py` for the
+        exact, disclosed scope of what "linked" means here.
+        """
+        result = twin.digital_twin(store, ulpin, _real_provenance_entries(store))
+        if result is None:
+            raise HTTPException(404, f"no harmonised parcel found for ulpin {ulpin!r}")
+        return result
+
+    @app.get("/api/evidence/{identifier}", tags=["platform"])
+    def evidence(identifier: str) -> dict[str, Any]:
+        """Explainable AI evidence for one harmonised parcel or building: its six real
+        confidence dimensions (with what each one measures), the source-reliability weights
+        actual Dempster-Shafer fusion would compute for its contributing datasets, and — if
+        one can be geometrically linked — the real adjudication-queue case behind an
+        unresolved conflict. `identifier` may be a ULPIN or an entity_id. See `api/twin.py`
+        for exactly how each figure is derived and what is left honestly unlinked.
+        """
+        result = twin.evidence_object(store, identifier, _real_provenance_entries(store))
+        if result is None:
+            raise HTTPException(404, f"no harmonised parcel or building found for {identifier!r}")
+        return result
+
+    @app.get("/api/timeline/{ulpin}", tags=["platform"])
+    def timeline(ulpin: str) -> dict[str, Any]:
+        """Temporal Land Intelligence for one parcel: a chronological trail built from real
+        contributing-dataset vintages, provenance-ledger stage timestamps, and any
+        change-detection records linkable to the parcel or its buildings. Returns
+        `available: false` with a stated reason rather than a fabricated history when this
+        run's outputs carry no temporal signal for the parcel.
+        """
+        result = twin.parcel_timeline(store, ulpin, _real_provenance_entries(store))
+        if result is None:
+            raise HTTPException(404, f"no harmonised parcel found for ulpin {ulpin!r}")
+        return result
 
     @app.get("/api/verify", tags=["platform"])
     def verify() -> dict[str, Any]:
@@ -1619,6 +1628,59 @@ def _grade_counts(feats: list[dict[str, Any]]) -> dict[str, int]:
         if g:
             out[g] = out.get(g, 0) + 1
     return dict(sorted(out.items()))
+
+
+def _real_aoi(store: Any) -> tuple[str, list[float]]:
+    """The AOI this store's out_dir was actually run over, from its real metrics.json —
+    never a hardcoded default, so a wider or narrower run than "core" is reported honestly.
+    """
+    from ..pipeline.presets import AOIS
+
+    real_metrics = store.metrics()
+    real_aoi = real_metrics.get("aoi") if isinstance(real_metrics, dict) else None
+    if real_aoi and real_aoi.get("name") and real_aoi.get("bbox"):
+        return real_aoi["name"], real_aoi["bbox"]
+    return AOIS["core"]
+
+
+def _real_provenance_entries(store: Any) -> list[dict[str, Any]]:
+    """The per-run provenance entries `/api/provenance` serves, factored out so the digital
+    twin, evidence and timeline endpoints below can look up the exact same dataset metadata
+    (authority, licence, CRS, accuracy, vintage, transformation) without re-deriving it.
+    """
+    from ..pipeline.presets import default_layers
+
+    catalogue: dict[str, Any] = {}
+    try:
+        from data_acquisition.sources import CATALOGUE  # type: ignore
+        catalogue = CATALOGUE
+    except ImportError:
+        pass
+
+    entries = []
+    for layer in default_layers(data_dir=""):
+        cat = catalogue.get(layer.dataset_id.lower())
+        entries.append({
+            "dataset_id": layer.dataset_id,
+            "feature_class": layer.feature_class.value if hasattr(layer.feature_class, "value") else str(layer.feature_class),
+            "source_type": layer.source_type.value if hasattr(layer.source_type, "value") else str(layer.source_type),
+            "authority": layer.authority,
+            "authority_full_name": cat.authority_name if cat else layer.authority,
+            "licence": layer.licence,
+            "accuracy_m": layer.accuracy_m,
+            "vintage": layer.vintage,
+            "tier": layer.tier,
+            "platform": layer.platform,
+            "original_format": layer.original_format,
+            "coverage": layer.coverage,
+            "transformation": layer.transformation,
+            "official_url": cat.url if cat else None,
+            "upstream": cat.upstream if cat else None,
+            "notes": cat.notes if cat else None,
+            "requires_credentials": cat.requires_credentials if cat else False,
+            "crs": cat.crs if cat else None,
+        })
+    return entries
 
 
 app = create_app(os.environ.get("GEOVAX_OUT", "out/chennai_metro"))

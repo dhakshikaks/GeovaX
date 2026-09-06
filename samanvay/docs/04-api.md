@@ -129,6 +129,34 @@ run.
 Every ledger entry touching that entity, in order, with hashes; plus the chain verification
 state and the current Merkle root.
 
+### `GET /api/twin/{ulpin}`
+
+The Land Digital Twin: one parcel's stable identity, its linked buildings, and every source
+dataset that contributed to either — authority, licence, CRS, declared accuracy and the
+transformation actually applied, cross-referenced from `contributing_datasets` against this
+run's real provenance catalogue. See [10 · Digital twin, evidence & timeline](10-digital-twin-evidence-timeline.md)
+for exactly what "linked" means and the one persistence gap (no per-claim `source_feature`
+table yet) that keeps this at dataset granularity rather than feature granularity.
+
+### `GET /api/evidence/{identifier}`
+
+Explainable AI evidence for one harmonised parcel or building (`identifier` is a ULPIN or an
+`entity_id`): the six confidence dimensions reconstructed from the record's own stored
+`conf_*` fields (with what each one measures, not just its number), the Dempster-Shafer
+source-reliability weights this run's registry actually computes for its contributing
+datasets, and — where one can be found by a disclosed nearest-geometry match against the
+adjudication queue's own published boundaries — the real conflict case behind an unresolved
+disagreement. Every figure is re-derived from a real, persisted pipeline output; nothing here
+is a template string or a fixed score.
+
+### `GET /api/timeline/{ulpin}`
+
+Temporal Land Intelligence for one parcel: a chronological trail built from real
+contributing-dataset vintages, provenance-ledger stage timestamps, and any change-detection
+record linkable to the parcel or its buildings by a shared raw source identifier. Returns
+`{"available": false, "reason": "..."}` — never a fabricated history — when a run's outputs
+carry no temporal signal for the parcel.
+
 ### `GET /api/verify`
 
 Verifies the hash chain and returns the Merkle root, plus — deliberately — the exact recipe

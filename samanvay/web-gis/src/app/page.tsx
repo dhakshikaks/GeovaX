@@ -123,6 +123,15 @@ export default function WebGISPage() {
   // the Dossier/Telemetry tabs too — null means "hasn't been run yet", not zero.
   const [geoaiExtractedCount, setGeoaiExtractedCount] = useState<number | null>(null);
   const [selectedParcel, setSelectedParcel] = useState<any | null>(null);
+  // Land Digital Twin / Explainable AI Evidence / Temporal Land Intelligence for whichever
+  // parcel is currently selected — real responses from api/twin.py's endpoints, fetched the
+  // moment a parcel is picked. null means "not fetched yet or none exists", never a
+  // placeholder value; the fetch effect below discards a stale response if the user selects
+  // a different parcel before it lands.
+  const [parcelTwin, setParcelTwin] = useState<any | null>(null);
+  const [parcelEvidence, setParcelEvidence] = useState<any | null>(null);
+  const [parcelTimeline, setParcelTimeline] = useState<any | null>(null);
+  const [twinStatus, setTwinStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [isResolving, setIsResolving] = useState(false);
   const [wardParcels, setWardParcels] = useState<any[]>([]);
   const [wardStats, setWardStats] = useState<any>({
@@ -1228,6 +1237,46 @@ export default function WebGISPage() {
     const geoaiSrc = mapInstanceRef.current?.getSource('geoai-extracted');
     if (geoaiSrc) geoaiSrc.setData({ type: 'FeatureCollection', features: [] });
   }, [selectedWard, currentUser, authReady]);
+
+  // Fetch the real Digital Twin, Explainable Evidence and Temporal Timeline for whichever
+  // parcel is selected. `cancelled` discards a response that lands after the user has
+  // already moved on to a different parcel (or cleared the selection) — the same race the
+  // ward-level updateMapDataToken guards against, scoped here to a single parcel fetch.
+  useEffect(() => {
+    const ulpin = selectedParcel?.ulpin;
+    if (!ulpin) {
+      setParcelTwin(null);
+      setParcelEvidence(null);
+      setParcelTimeline(null);
+      setTwinStatus('idle');
+      return;
+    }
+    let cancelled = false;
+    setTwinStatus('loading');
+    setParcelTwin(null);
+    setParcelEvidence(null);
+    setParcelTimeline(null);
+    const encoded = encodeURIComponent(ulpin);
+    Promise.all([
+      fetch(`http://127.0.0.1:8000/api/twin/${encoded}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`http://127.0.0.1:8000/api/evidence/${encoded}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`http://127.0.0.1:8000/api/timeline/${encoded}`).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([twinData, evidenceData, timelineData]) => {
+        if (cancelled) return;
+        setParcelTwin(twinData);
+        setParcelEvidence(evidenceData);
+        setParcelTimeline(timelineData);
+        setTwinStatus('idle');
+      })
+      .catch((err) => {
+        console.error('Digital twin/evidence/timeline fetch failed', err);
+        if (!cancelled) setTwinStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedParcel?.ulpin]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden', fontFamily: '"Open Sans", -apple-system, BlinkMacSystemFont, sans-serif' }}>
@@ -2720,6 +2769,178 @@ export default function WebGISPage() {
                           <span style={{ color: '#565c65' }}>Buildings on parcel:</span>
                           <strong>{selectedParcel.building_count} ({selectedParcel.built_up_area_m2 ?? '—'} m² built-up, {selectedParcel.ground_coverage_pct ?? '—'}% coverage)</strong>
                         </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Land Digital Twin — real linked buildings + contributing-dataset
+                      provenance for this parcel, from GET /api/twin/{ulpin}. */}
+                  <div style={{ marginTop: '12px', border: '1px solid #1a4480', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    <div style={{ background: '#1a4480', color: '#fff', padding: '6px 8px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Land Digital Twin
+                    </div>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {twinStatus === 'loading' && (
+                        <span style={{ color: '#565c65' }}>Assembling digital twin from harmonised outputs…</span>
+                      )}
+                      {twinStatus === 'error' && (
+                        <span style={{ color: '#d83933' }}>Digital twin service unavailable — backend at 127.0.0.1:8000 unreachable.</span>
+                      )}
+                      {twinStatus === 'idle' && !parcelTwin && (
+                        <span style={{ color: '#565c65' }}>No digital twin record could be assembled for this ULPIN.</span>
+                      )}
+                      {parcelTwin && (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#565c65' }}>Linked buildings:</span>
+                            <strong>{parcelTwin.buildings.count}{parcelTwin.buildings.truncated ? ' (showing first 200)' : ''}</strong>
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#1a4480', marginBottom: '3px' }}>
+                              Linked source datasets ({parcelTwin.linked_datasets.length})
+                            </div>
+                            {parcelTwin.linked_datasets.map((d: any) => (
+                              <div key={d.dataset_id} style={{ borderTop: '1px solid #e6e6e6', padding: '3px 0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <strong>{d.dataset_id}</strong>
+                                  <span style={{ color: '#565c65', textTransform: 'capitalize' }}>{d.category?.replace(/_/g, ' ')}</span>
+                                </div>
+                                <div style={{ color: '#565c65', fontSize: '0.68rem' }}>
+                                  {d.authority ? `${d.authority} · ` : ''}{d.licence || 'licence not recorded'}{d.crs ? ` · ${d.crs}` : ''}
+                                  {d.accuracy_m != null ? ` · ±${d.accuracy_m} m` : ''}{d.vintage ? ` · vintage ${d.vintage}` : ''}
+                                </div>
+                                {d.transformation && (
+                                  <div style={{ color: '#8c5b00', fontSize: '0.65rem' }}>{d.transformation}</div>
+                                )}
+                                <div style={{ color: '#565c65', fontSize: '0.65rem' }}>Contributes to: {d.roles?.join(', ')}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {parcelTwin.utility_links.length > 0 && (
+                            <div style={{ borderTop: '1px solid #e6e6e6', paddingTop: '4px' }}>
+                              <div style={{ fontWeight: 700, color: '#1a4480', marginBottom: '2px' }}>Nearby utility network</div>
+                              {parcelTwin.utility_links.map((u: any, i: number) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#565c65' }}>
+                                  <span>{u.feature}</span>
+                                  <strong>{u.distance_m} m</strong>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{ borderTop: '1px solid #e6e6e6', paddingTop: '4px', color: '#565c65', fontSize: '0.65rem', fontStyle: 'italic' }}>
+                            {parcelTwin.provenance_scope_note}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Explainable AI Evidence — real per-dimension confidence breakdown,
+                      source-reliability weights, and any geometrically-linked adjudication
+                      case, from GET /api/evidence/{ulpin}. */}
+                  <div style={{ marginTop: '12px', border: '1px solid #1a4480', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    <div style={{ background: '#1a4480', color: '#fff', padding: '6px 8px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Explainable AI Evidence
+                    </div>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {twinStatus === 'loading' && (
+                        <span style={{ color: '#565c65' }}>Computing evidence from run outputs…</span>
+                      )}
+                      {parcelEvidence?.confidence && (
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#1a4480', marginBottom: '2px' }}>
+                            {parcelEvidence.confidence.explanation}
+                          </div>
+                          {parcelEvidence.confidence.dimensions.map((d: any) => (
+                            <div key={d.name} style={{ borderTop: '1px solid #e6e6e6', padding: '3px 0' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ textTransform: 'capitalize' }}>{d.name.replace(/_/g, ' ')}</span>
+                                <strong>{(d.score * 100).toFixed(1)}% (weight {(d.weight * 100).toFixed(0)}%)</strong>
+                              </div>
+                              <div style={{ color: '#565c65', fontSize: '0.65rem' }}>{d.meaning}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {parcelEvidence?.source_reliability?.length > 0 && (
+                        <div style={{ borderTop: '1px solid #e6e6e6', paddingTop: '4px' }}>
+                          <div style={{ fontWeight: 700, color: '#1a4480', marginBottom: '2px' }}>Source reliability (Dempster-Shafer priors)</div>
+                          {parcelEvidence.source_reliability.map((r: any) => (
+                            <div key={r.dataset_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#565c65' }}>
+                              <span>{r.dataset_id} ({r.source_type})</span>
+                              <strong>reliability {(r.reliability_prior * 100).toFixed(0)}% · recency {(r.recency_weight * 100).toFixed(0)}% · accuracy {(r.accuracy_weight * 100).toFixed(0)}%</strong>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {parcelEvidence?.conflicting_sources && (
+                        <div style={{ borderTop: '1px solid #e6e6e6', paddingTop: '4px' }}>
+                          <div style={{ fontWeight: 700, color: '#1a4480', marginBottom: '2px' }}>Conflicting sources</div>
+                          {parcelEvidence.conflicting_sources.linked_case ? (
+                            <div style={{ background: '#fdf1f1', border: '1px solid #f0c6c4', borderRadius: '3px', padding: '5px' }}>
+                              <div style={{ color: '#d83933', fontWeight: 700, fontSize: '0.68rem' }}>
+                                {parcelEvidence.conflicting_sources.linked_case.case_id}
+                              </div>
+                              <div style={{ fontSize: '0.68rem', margin: '2px 0' }}>{parcelEvidence.conflicting_sources.linked_case.why}</div>
+                              {parcelEvidence.conflicting_sources.linked_case.options?.map((o: any, i: number) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#565c65' }}>
+                                  <span>{o.dataset} ({o.source_type})</span>
+                                  <span>weight {o.weight} · ±{o.declared_accuracy_m ?? '—'} m</span>
+                                </div>
+                              ))}
+                              <div style={{ fontSize: '0.62rem', color: '#8c5b00', marginTop: '3px', fontStyle: 'italic' }}>
+                                {parcelEvidence.conflicting_sources.linked_case.matched_by}
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ color: '#565c65', fontSize: '0.68rem' }}>{parcelEvidence.conflicting_sources.note}</div>
+                          )}
+                        </div>
+                      )}
+                      {parcelEvidence?.change_evidence?.length > 0 && (
+                        <div style={{ borderTop: '1px solid #e6e6e6', paddingTop: '4px' }}>
+                          <div style={{ fontWeight: 700, color: '#1a4480', marginBottom: '2px' }}>Linked change-detection evidence</div>
+                          {parcelEvidence.change_evidence.map((c: any, i: number) => (
+                            <div key={i} style={{ fontSize: '0.68rem', color: '#565c65', padding: '2px 0' }}>
+                              <strong style={{ color: '#1b1b1b', textTransform: 'capitalize' }}>{c.change_type?.replace(/_/g, ' ')}</strong>: {c.registry_action}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Temporal Land Intelligence — chronological provenance trail (source
+                      vintages, pipeline stages, linked change records) from
+                      GET /api/timeline/{ulpin}. */}
+                  <div style={{ marginTop: '12px', border: '1px solid #1a4480', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    <div style={{ background: '#1a4480', color: '#fff', padding: '6px 8px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Temporal Land Intelligence
+                    </div>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {twinStatus === 'loading' && (
+                        <span style={{ color: '#565c65' }}>Building timeline…</span>
+                      )}
+                      {parcelTimeline && !parcelTimeline.available && (
+                        <div style={{ background: '#fff9e6', border: '1px solid #ffe699', borderRadius: '3px', padding: '6px', color: '#8c5b00', fontSize: '0.7rem' }}>
+                          {parcelTimeline.reason}
+                        </div>
+                      )}
+                      {parcelTimeline?.available && (
+                        <>
+                          {parcelTimeline.events.map((e: any, i: number) => (
+                            <div key={i} style={{ borderLeft: '2px solid #1a4480', paddingLeft: '6px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                                <strong style={{ textTransform: 'capitalize' }}>{e.kind.replace(/_/g, ' ')}</strong>
+                                <span style={{ color: '#565c65' }}>{e.date ? new Date(e.date).toLocaleDateString() : 'undated'}</span>
+                              </div>
+                              <div style={{ color: '#565c65', fontSize: '0.68rem' }}>{e.description}</div>
+                            </div>
+                          ))}
+                          <div style={{ borderTop: '1px solid #e6e6e6', paddingTop: '4px', color: '#565c65', fontSize: '0.65rem', fontStyle: 'italic' }}>
+                            {parcelTimeline.note}
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
