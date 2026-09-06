@@ -60,7 +60,7 @@ A platform that reported this data as fine would be more impressive and less use
 - **`Deck/SIH 2026 - 26013.pptx`** — 7 slides, editable, on the SIH 2026 template.
 - **`Deck/PS26013-Presentation/SIH 2026 - PS26013.pdf`** — the same deck, fixed layout.
 - **`Deck/PS/`** — the problem statement as issued. **`Deck/Reports/`** — conformance / evidence reports.
-- `archive/SAMANVAY_PS26013.pptx` / `.pdf` — the superseded 15-slide deck, kept for reference.
+- `archive/GEOVAX_PS26013.pptx` / `.pdf` — the superseded 15-slide deck, kept for reference.
 
 ### Deliverable 3 — architecture and solution document
 
@@ -81,7 +81,7 @@ A platform that reported this data as fine would be more impressive and less use
 
 ### Deliverable 4 — working codebase
 
-- **`archive/geovax-source.tar.gz`** — the complete repository (working tree also in `samanvay/`).
+- **`archive/geovax-source.tar.gz`** — the complete repository snapshot for the GeovaX working tree.
 
 ```bash
 tar xzf archive/geovax-source.tar.gz && cd geovax

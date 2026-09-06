@@ -1,0 +1,125 @@
+GeovaX DATASET URLS
+====================
+
+Catalogue source: data_acquisition/sources.py
+Runtime policy: production pipeline uses real downloaded or live-fetched data only.
+Proxy entries below are real external datasets, not synthetic data.
+
+CADASTRAL AND ADMINISTRATIVE DATA
+---------------------------------
+tngis_cadastre
+https://github.com/ramSeraph/indian_cadastrals/releases/download/tamil-nadu/TNGIS_TN_Cadastrals.geojsonl.7z
+
+ncscm_cadastre
+https://github.com/ramSeraph/indian_cadastrals/releases/download/tamil-nadu/NCSCM_TN_Cadastrals.geojsonl.7z
+
+lgd_india
+https://github.com/ramSeraph/indian_admin_boundaries/releases/download/villages/LGD_Villages.geojsonl.7z
+
+gcc_wards
+https://raw.githubusercontent.com/yashveeeeeeer/india-geodata/main/data/urban/municipal-boundaries/chennai/Wards.geojson
+
+gcc_zones
+https://raw.githubusercontent.com/yashveeeeeeer/india-geodata/main/data/urban/municipal-boundaries/chennai/Zones.geojson
+
+cma_boundary
+https://raw.githubusercontent.com/yashveeeeeeer/india-geodata/main/data/urban/municipal-boundaries/chennai/CMA.geojson
+
+gcc_opencity_wards
+https://data.opencity.in/dataset/gcc-ward-information
+
+tn_ogd_panchayats
+https://tn.data.gov.in/catalog/details-blocks-habitations-and-village-panchayats-tamil-nadu
+
+BUILDING DATA
+------------
+gcc_buildings
+https://github.com/ramSeraph/indian_buildings/releases/download/urban/TNGIS_GCC_Chennai_Buildings.geojsonl.7z
+
+amrut_buildings
+https://github.com/ramSeraph/indian_buildings/releases/download/urban/TN_AMRUT_Buildings.geojsonl.7z
+
+google_open_buildings
+https://storage.googleapis.com/open-buildings-data/v3/polygons_s2_level_4_gzip/3a5_buildings.csv.gz
+
+ms_building_footprints_tn
+https://minedbuildings.z5.web.core.windows.net/global-buildings/2026-02-03/global-buildings.geojsonl/RegionName=India/quadkey=123312203/part-00159-4feead82-d499-422b-94cb-c036c212127a.c000.csv.gz
+
+osm_buildings_gt
+https://overpass.kumi.systems/api/interpreter
+
+UAV, ELEVATION, AND GNSS DATA
+-----------------------------
+uav_ori_odm
+https://github.com/OpenDroneMap/UAVArena.git#data/odm-3.0.0
+
+uav_ori_pix4d
+https://github.com/OpenDroneMap/UAVArena.git#data/pix4d-4.4.10
+
+uav_dsm_odm
+https://github.com/OpenDroneMap/UAVArena.git#data/odm-3.0.0/*/dsm
+
+bhuvan_cartodem
+https://bhuvan-app3.nrsc.gov.in/data/download/
+
+soi_cors_rinex
+https://cors.surveyofindia.gov.in/
+
+noaa_cors_rinex_proxy
+https://noaa-cors-pds.s3.amazonaws.com/rinex/2024/001/ab02/ab020010.24o.gz
+
+soi_open_series_maps
+https://onlinemaps.surveyofindia.gov.in/
+
+OFFICIAL REVENUE, GROUND-TRUTH, AND REFERENCE SERVICES
+-------------------------------------------------------
+svamitva_drone_villages
+https://www.data.gov.in/resource/drone-flown-villages
+
+ncscm_czmp_tn
+https://ncscm.res.in/wp-content/uploads/pdf/TN_CZMP.pdf
+
+njdg_ecourts
+https://napix.gov.in
+
+tn_registration_ec
+https://tnreginet.gov.in/
+
+tn_patta_chitta
+https://eservices.tn.gov.in/
+
+chennai_metrowater_transmission
+https://data.opencity.in/dataset/chennai-water-transmission-network
+
+naksha_dolr
+https://naksha.dolr.gov.in/NakshaPortal/
+
+CONNECTOR ENDPOINTS
+-------------------
+TNGIS GeoServer
+https://tngis.tn.gov.in/geoserver/tngis/ows
+
+NAKSHA ArcGIS FeatureServer
+https://nakshagis.dolr.gov.in/utm44/rest/services/Naksha_44/Naksha_tn_33_44/FeatureServer
+
+NAKSHA token service
+https://nakshagis.dolr.gov.in/portal/sharing/rest/generateToken
+
+TamilNilam revenue service
+https://tamilnilam.tn.gov.in/egovService/
+
+OpenCity CKAN API
+https://data.opencity.in/api/3/action/package_show
+
+LGD official directory
+https://lgdirectory.gov.in/
+
+Google Open Buildings catalogue
+https://sites.research.google/open-buildings/
+
+Microsoft building dataset index
+https://minedbuildings.z5.web.core.windows.net/global-buildings/dataset-links.csv
+
+All entries are real sources. Some official services require registration, CAPTCHA,
+OTP, subscription, or departmental credentials. Proxy entries are explicitly labelled
+in data_acquisition/sources.py and are never presented as Indian government data.

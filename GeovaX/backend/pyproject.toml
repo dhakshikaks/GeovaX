@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "GeovaX"
+version = "1.0.0"
+description = "AI-enabled multi-source geospatial harmonisation for urban land records (SIH 2026 PS 26013)"
+# readme = "../README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Team GeovaX" }]
+keywords = ["cadastre", "geospatial", "land-records", "NAKSHA", "DILRMP", "harmonisation"]
+
+dependencies = [
+  "numpy>=1.26,<3",
+  "scipy>=1.11",
+  "shapely>=2.0",
+  "pyproj>=3.6",
+  "rasterio>=1.3",
+  "geopandas>=1.0",
+  "pyogrio>=0.7",
+  "pyarrow>=14",
+  "scikit-learn>=1.4",
+  "rapidfuzz>=3.6",
+  "matplotlib>=3.8",
+  "pillow>=10",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "sqlalchemy>=2.0",
+  "psycopg2-binary>=2.9",
+  "networkx>=3.2",
+  "redis>=5.0",
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.3", "mypy>=1.9"]
+# Optional real Segment Anything inference path for geoai/sam_extractor.py — only activates
+# when both this extra is installed AND a real checkpoint path is configured; the default
+# classical-CV extraction path (raster/terrain.py + geoai/footprints.py) needs neither.
+sam = ["torch>=2.2", "segment-anything>=1.0"]
+
+[project.scripts]
+geovax = "GeovaX.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["GeovaX*"]
+
+[tool.ruff]
+line-length = 96
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
