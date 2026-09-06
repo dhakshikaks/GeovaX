@@ -120,4 +120,6 @@ def default_layers(data_dir: str, max_features: int | None = None) -> list[Layer
             transformation="Live Overpass query, converted to GeoJSON, clipped to AOI bbox",
         ),
     ]
+    if not data_dir:
+        return layers
     return [layer for layer in layers if os.path.exists(layer.path)]

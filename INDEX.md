@@ -20,6 +20,19 @@ are no synthetic features anywhere in the corpus, the evaluation or the demo.
 
 ---
 
+## Run it — double-click in Finder
+
+Two clean launchers sit beside this file. Double-click them in Finder; the first time
+macOS may call one unidentified, so right-click it once and choose Open.
+
+| Launcher | What it does |
+|---|---|
+| **`Run Localhost.command`** | **One-click platform launcher.** Starts both the Next.js Enterprise Web-GIS (`http://localhost:3000`) and the FastAPI Backend & Harmonisation Map (`http://127.0.0.1:8000`), verifies services, and automatically opens your browser. Press Ctrl-C in the terminal to stop all services. |
+| **`Setup and Test.command`** | Builds/refreshes the local `.venv`, installs dependencies, runs the complete test suite (129 tests), and independently verifies the provenance ledger. |
+| `Jury/geovax-demo.html` | Directly double-clickable in Finder for the offline, standalone single-file demo. |
+
+Everything they do can also be run via `make` targets or `geovax` CLI subcommands; `make help` lists them all.
+
 ## The headline
 
 One 17-minute run on 2 vCPU over 22 km² of central Chennai:
