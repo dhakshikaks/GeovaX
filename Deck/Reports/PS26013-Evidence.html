@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GEOVAX Evidence Ledger</title>
+<style>
+:root{
+  color-scheme: light;
+  --ground:#eef3f5; --surface:#ffffff; --surface-2:#e4ecef;
+  --rule:#cbd9de; --rule-soft:#dde7ea;
+  --ink:#0a1b22; --ink-2:#3f5c67; --ink-3:#6d858f;
+  --signal:#0d6f6b; --amber:#a4620a; --good:#1a6f37; --crit:#a83828;
+  --series-1:#2a78d6; --series-2:#eb6834; --neutral-mark:#a8bcc4;
+  --shadow:0 1px 2px rgba(10,27,34,.05), 0 8px 24px -18px rgba(10,27,34,.4);
+}
+@media (prefers-color-scheme: dark){
+ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --ground:#081116; --surface:#101c22; --surface-2:#16252c;
+  --rule:#273a42; --rule-soft:#1d2f36;
+  --ink:#e9f2f5; --ink-2:#a2bcc6; --ink-3:#75909c;
+  --signal:#3fbdb6; --amber:#dd9b3b; --good:#4cb96e; --crit:#e4715f;
+  --series-1:#3987e5; --series-2:#d95926; --neutral-mark:#3d5560;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.9);
+ }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#081116; --surface:#101c22; --surface-2:#16252c;
+  --rule:#273a42; --rule-soft:#1d2f36;
+  --ink:#e9f2f5; --ink-2:#a2bcc6; --ink-3:#75909c;
+  --signal:#3fbdb6; --amber:#dd9b3b; --good:#4cb96e; --crit:#e4715f;
+  --series-1:#3987e5; --series-2:#d95926; --neutral-mark:#3d5560;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:-apple-system,"Segoe UI","IBM Plex Sans",system-ui,sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:0 26px}
+h1,h2,h3,.eyebrow,.figure-title{font-family:"Archivo",-apple-system,"Segoe UI",system-ui,sans-serif}
+.mono,td.n,th.n,.stat .v,.prov,code{font-family:"SF Mono",ui-monospace,Menlo,"DejaVu Sans Mono",monospace;
+  font-variant-numeric:tabular-nums}
+code{font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:3px}
+
+.mast{border-bottom:1px solid var(--rule);background:var(--surface)}
+.mast .wrap{padding-top:34px;padding-bottom:30px}
+.badge{display:inline-flex;align-items:center;gap:9px;font-size:11.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:var(--signal)}
+h1{margin:16px 0 0;font-size:clamp(30px,4.6vw,46px);line-height:1.06;font-weight:700;
+   letter-spacing:-.022em;text-wrap:balance}
+h1 .lede{display:block;margin-top:12px;font-size:clamp(15px,1.9vw,19px);font-weight:500;
+   color:var(--ink-2);letter-spacing:0;line-height:1.5;max-width:70ch}
+.provbar{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px 22px;font-size:12.5px;
+  color:var(--ink-3)}
+.provbar b{color:var(--ink-2);font-weight:600}
+
+section{padding:38px 0 0}
+h2{font-size:clamp(20px,2.5vw,26px);line-height:1.2;margin:0 0 6px;letter-spacing:-.012em}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--signal);
+  font-weight:700;margin-bottom:8px}
+p{margin:0 0 14px;max-width:76ch;color:var(--ink-2)}
+p.tight{margin-bottom:8px}
+strong{color:var(--ink)}
+
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:12px;
+  padding:18px 20px;margin:16px 0 0;box-shadow:var(--shadow)}
+.figure-title{font-size:13px;font-weight:700;letter-spacing:.02em;margin:0 0 3px}
+.figure-sub{font-size:12.5px;color:var(--ink-3);margin:0 0 14px}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--rule-soft);
+  vertical-align:top}
+th{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:700;border-bottom:1px solid var(--rule)}
+td.n,th.n{text-align:right;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td b{color:var(--ink)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  background:var(--rule-soft);border:1px solid var(--rule);border-radius:12px;overflow:hidden;
+  margin:16px 0 0}
+.stat{background:var(--surface);padding:14px 16px}
+.stat .v{font-size:23px;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1.1}
+.stat .k{font-size:12px;color:var(--ink-3);margin-top:5px;line-height:1.35}
+
+.callout{margin:16px 0 0;padding:15px 18px;border-left:3px solid var(--signal);
+  background:var(--surface);border-radius:0 10px 10px 0;box-shadow:var(--shadow)}
+.callout .t{font-weight:700;color:var(--ink);font-size:14px;margin-bottom:5px;
+  font-family:"Archivo",-apple-system,sans-serif}
+.callout p{margin:0;font-size:14.5px}
+.callout.warn{border-left-color:var(--amber)}
+.callout.crit{border-left-color:var(--crit)}
+
+.pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;
+  padding:2px 8px;border-radius:99px;white-space:nowrap}
+.pill.ok{background:rgba(26,111,55,.13);color:var(--good)}
+.pill.warn{background:rgba(164,98,10,.14);color:var(--amber)}
+.pill.crit{background:rgba(168,56,40,.13);color:var(--crit)}
+.pill.neutral{background:var(--surface-2);color:var(--ink-3)}
+
+pre{margin:14px 0 0;padding:14px 16px;background:var(--surface-2);border:1px solid var(--rule-soft);
+  border-radius:10px;overflow-x:auto;font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+pre b{color:var(--ink)}
+
+.bar{height:9px;border-radius:5px;background:var(--surface-2);overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:var(--series-1)}
+.bar.b2 i{background:var(--series-2)}
+
+footer{margin-top:52px;padding:26px 0 60px;border-top:1px solid var(--rule);
+  font-size:13px;color:var(--ink-3)}
+
+@page{size:A4;margin:13mm 11mm}
+@media print{
+  body{background:#fff}
+  .panel,.stats{box-shadow:none;break-inside:auto}
+  .callout{box-shadow:none;break-inside:avoid}
+  .stat{break-inside:avoid}
+  section{break-inside:auto}
+  h2{break-after:avoid}
+  table{break-inside:auto}
+  tr{break-inside:avoid}
+  .pill,.bar i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<div class="mast">
+  <div class="wrap">
+    <div class="badge"><span class="dot"></span>Evidence Ledger · SIH 2026 · PS 26013</div>
+    <h1>GEOVAX
+      <span class="lede">Every number below is an output of one harmonisation run over real,
+      openly licensed Indian government data. Nothing is synthetic, nothing is rounded in our
+      favour, and the findings that make the platform look worse are in here too — because
+      those are the ones a department would need.</span>
+    </h1>
+    <div class="provbar">
+      <span><b>Run</b> <span class="mono">d41789a8-375e-4c24-9ad9-cad34853d620</span></span>
+      <span><b>Completed</b> 2026-09-06 16:49 UTC</span>
+      <span><b>Source</b> <span class="mono">out/chennai_metro/metrics.json</span></span>
+      <span><b>Hardware</b> 2 vCPU · 7 GB</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ================================================================== 01 -->
+<section>
+  <div class="eyebrow">01 · The run</div>
+  <h2>One AOI, five real layers, four minutes</h2>
+  <p>Chennai — Nungambakkam · Kilpauk · Chetpet, bounded by
+  <span class="mono">80.225–80.265 E, 13.045–13.095 N</span>: roughly 4.3 × 5.5 km of dense
+  central city. Deliberately modest hardware, because a platform that needs a data centre to
+  harmonise one ward cannot be deployed to a district office.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="v">106,077</div><div class="k">entities harmonised</div></div>
+    <div class="stat"><div class="v">14,614</div><div class="k">parcels · all ULPIN-identified</div></div>
+    <div class="stat"><div class="v">91,463</div><div class="k">building footprints</div></div>
+    <div class="stat"><div class="v">241.6 s</div><div class="k">wall clock, 12 stages</div></div>
+    <div class="stat"><div class="v">20</div><div class="k">ledger entries, chain verified</div></div>
+    <div class="stat"><div class="v">0</div><div class="k">synthetic features</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="figure-title">Where the time goes</div>
+    <div class="figure-sub">Twelve checkpointed stages. Matching dominates, and it should —
+      it is the only stage that reasons about 370,494 candidate pairs.</div>
+    <table>
+      <thead><tr><th>Stage</th><th class="n">Seconds</th><th style="width:34%">Share</th><th>What dominates it</th></tr></thead>
+      <tbody>
+        <tr><td><b>match</b></td><td class="n">141.16</td><td><div class="bar"><i style="width:100%"></i></div></td><td>two-stage feature extraction over 370,494 candidate pairs</td></tr>
+        <tr><td>cluster</td><td class="n">34.93</td><td><div class="bar"><i style="width:24.7%"></i></div></td><td>union-find transitive closure across layers</td></tr>
+        <tr><td>topology</td><td class="n">24.72</td><td><div class="bar"><i style="width:17.5%"></i></div></td><td>STRtree pairwise scan and union for the gap check</td></tr>
+        <tr><td>resolve</td><td class="n">11.68</td><td><div class="bar"><i style="width:8.3%"></i></div></td><td>Dempster–Shafer fusion over 558,294 property claims</td></tr>
+        <tr><td>ingest</td><td class="n">9.87</td><td><div class="bar"><i style="width:7.0%"></i></div></td><td>streaming JSONL with a textual bbox pre-screen</td></tr>
+        <tr><td>assemble</td><td class="n">7.61</td><td><div class="bar"><i style="width:5.4%"></i></div></td><td>ULPIN minting, geodesic areas, output records</td></tr>
+        <tr><td>reproject</td><td class="n">4.25</td><td><div class="bar"><i style="width:3.0%"></i></div></td><td>one PROJ transform per geometry</td></tr>
+        <tr><td>structures</td><td class="n">3.32</td><td><div class="bar"><i style="width:2.4%"></i></div></td><td>building-to-parcel assignment and built form</td></tr>
+        <tr><td>confidence</td><td class="n">2.26</td><td><div class="bar"><i style="width:1.6%"></i></div></td><td>six-dimension scoring over 106,077 features</td></tr>
+        <tr><td>change</td><td class="n">1.26</td><td><div class="bar"><i style="width:0.9%"></i></div></td><td>typed cross-source discrepancy classification</td></tr>
+        <tr><td>schema_map</td><td class="n">0.55</td><td><div class="bar"><i style="width:0.4%"></i></div></td><td>value profiling over sampled records per layer</td></tr>
+        <tr><td>publish</td><td class="n">0.00</td><td><div class="bar"><i style="width:0.2%"></i></div></td><td>GeoJSON, metrics, ledger, adjudication queue</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================== 02 -->
+<section>
+  <div class="eyebrow">02 · Ingestion</div>
+  <h2>Every input is measured, not trusted</h2>
+  <p>The profiler measures what arrives rather than believing the metadata that came with it.
+  Two findings from this corpus are worth stating before anything else.</p>
+
+  <div class="panel">
+    <div class="figure-title">The five configured layers, as profiled in the AOI</div>
+    <div class="figure-sub">Declared accuracy is what the publishing authority claims. It is an
+      input to the evidence model, not a measurement — which is exactly why it is recorded.</div>
+    <table>
+      <thead><tr><th>Layer</th><th class="n">Features in AOI</th><th class="n">Declared acc.</th>
+        <th class="n">Coord. digits</th><th class="n">Invalid in sample</th></tr></thead>
+      <tbody>
+        <tr><td><b>TNGIS cadastre</b> · TNeGA</td><td class="n">14,253</td><td class="n">3.0 m</td><td class="n">7</td><td class="n">0</td></tr>
+        <tr><td><b>NCSCM cadastre</b> · MoEFCC</td><td class="n">1,826</td><td class="n">5.0 m</td><td class="n">7</td><td class="n">3</td></tr>
+        <tr><td><b>GCC buildings</b> · municipal survey</td><td class="n">55,810</td><td class="n">1.0 m</td><td class="n">7</td><td class="n">4</td></tr>
+        <tr><td><b>Google Open Buildings v3</b> · extraction</td><td class="n">70,776</td><td class="n">1.8 m</td><td class="n">7</td><td class="n">0</td></tr>
+        <tr><td><b>MS Buildings TN</b> · extraction</td><td class="n"><b>0</b></td><td class="n">2.0 m</td><td class="n">—</td><td class="n">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <div class="t">A configured layer contributed nothing, and the run says so</div>
+    <p><strong>MS Buildings TN returned zero features in this AOI.</strong> The platform reports
+    that as a completeness gap rather than quietly proceeding with four sources where five were
+    configured. A pipeline that silently drops an empty layer is a pipeline whose coverage
+    claims cannot be audited.</p>
+  </div>
+
+  <div class="callout">
+    <div class="t">Precision is not accuracy, and the distinction is measured</div>
+    <p>Every vector source carries <strong>7 decimal digits, an implied precision of 0.011 m</strong>.
+    A dataset can be stored to the millimetre and be three metres wrong. What this establishes is
+    that <strong>no source is precision-limited</strong> — so every disagreement observed downstream
+    is real disagreement between surveys, not rounding.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 03 -->
+<section>
+  <div class="eyebrow">03 · Attribute mapping</div>
+  <h2>Four unseen schemas, crosswalked without configuration</h2>
+  <p>The matcher was given four source schemas it had never seen and produced crosswalks to the
+  canonical land-record schema with no hand-written mapping file.</p>
+
+  <div class="panel">
+    <table>
+      <thead><tr><th>Source</th><th class="n">Columns</th><th class="n">Mapped</th><th>Representative resolutions</th></tr></thead>
+      <tbody>
+        <tr><td>TNGIS cadastre</td><td class="n">12</td><td class="n">5</td>
+          <td><code>kide</code> → survey_number · <code>lgd_village_code</code> → village_lgd · <code>sub_division</code> → subdivision</td></tr>
+        <tr><td>NCSCM cadastre</td><td class="n">7</td><td class="n">4</td>
+          <td><code>Survey_Number</code> → survey_number · <code>Village</code>/<code>Taluk</code>/<code>District</code> → name fields</td></tr>
+        <tr><td>GCC buildings</td><td class="n">13</td><td class="n">6</td>
+          <td><code>gcc_gis_id</code> → door_number · <code>ward_number</code> → ward · <code>road_name</code> → street</td></tr>
+        <tr><td>Google Open Buildings</td><td class="n">4</td><td class="n">1</td>
+          <td><code>confidence</code> → confidence (the layer carries almost no attributes)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <div class="t"><code>kide</code> is the case that matters</div>
+    <p>It is the TNGIS cadastre's survey-number column. Its name conveys nothing, and no
+    lexical matcher will ever find it. It resolves because its <strong>values</strong> —
+    <span class="mono">437</span>, <span class="mono">438/2</span>, <span class="mono">1201/3A</span>
+    — are survey numbers. Value profiling is not a refinement here; it is the only signal that works.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="t">And the mappings it refused to apply</div>
+    <p>Candidates scoring in the middle band are surfaced for review rather than applied. This
+    run flagged <code>lgd_district_code → state_lgd</code> at <strong>0.544</strong> — lexically
+    plausible, 100% pattern match on the values, and <strong>wrong</strong>. A human rejects it in
+    two seconds. An automatic mapper at a lower threshold would have corrupted the administrative
+    hierarchy for the whole AOI.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 04 -->
+<section>
+  <div class="eyebrow">04 · Topology</div>
+  <h2>Repairs are bounded, audited, and sometimes refused</h2>
+  <p>Every geometric correction moves a boundary somebody owns, so repair is treated as a
+  recorded act rather than a cleanup step.</p>
+
+  <div class="panel">
+    <table>
+      <thead><tr><th>Layer</th><th>Validation before repair</th><th class="n">Repairs</th><th class="n">Refused</th></tr></thead>
+      <tbody>
+        <tr><td>TNGIS cadastre</td><td>2 fatal · 150 errors · 34 warnings · planar-partition error <b>0.1152%</b> (overlap 152.2 m², gap 13,951.5 m²)</td><td class="n">711</td><td class="n">0</td></tr>
+        <tr><td>NCSCM cadastre</td><td>0 fatal · 7 errors · 13 warnings · planar-partition error <b>0.0497%</b> (gap 4,970.3 m²)</td><td class="n">20</td><td class="n">0</td></tr>
+        <tr><td>GCC buildings</td><td>57 fatal · 278 errors · 817 warnings · no partition check (buildings are not a partition)</td><td class="n">—</td><td class="n">—</td></tr>
+        <tr><td>Google Open Buildings</td><td>0 fatal · 1 error · 0 warnings</td><td class="n">—</td><td class="n">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Violation classes found in the TNGIS layer alone: ring orientation 14,257 · gaps 48 ·
+  slivers 59 · spikes 43 · duplicate vertices 30 · micro-areas 3 · invalid geometry 2 ·
+  multipart parcel 1. <strong>Mean topological confidence after repair: 0.9997.</strong></p>
+
+  <div class="callout">
+    <div class="t">The ceiling is the point</div>
+    <p>Overlaps above 5 m² and snaps beyond 0.5 m are <strong>refused and escalated</strong>, not
+    absorbed. A half-metre boundary movement is a survey discrepancy, not a digitising error, and
+    a platform that quietly closes it has just redrawn someone's parcel.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 05 -->
+<section>
+  <div class="eyebrow">05 · Registration</div>
+  <h2>Two systematic offsets nobody had declared</h2>
+  <p>Before any matching, the platform estimates whether two layers are simply shifted relative
+  to each other. Both pairs in this corpus were.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="v">1.51 m @ 073°</div><div class="k">GCC survey ↔ Google Open Buildings<br>from 5,226 confident pairs · residual RMS 2.51 m</div></div>
+    <div class="stat"><div class="v">3.41 m @ 309°</div><div class="k">TNGIS ↔ NCSCM cadastre<br>from 469 confident pairs · residual RMS 9.05 m</div></div>
+  </div>
+
+  <p>Both are measured automatically, in under a second, and removed before matching. Left in, a
+  1.5 m offset collapses IoU for every pair simultaneously, so the matcher's most informative
+  feature becomes noise — and downstream, every building appears to encroach slightly on its
+  neighbour, generating thousands of false findings that each cost an officer's time to dismiss.</p>
+
+  <div class="callout">
+    <div class="t">Why the median, not the mean</div>
+    <p>The sample of centroid differences is contaminated by genuine change — buildings that
+    really did move, split or appear. The median is unmoved by up to half the sample being wrong;
+    the mean is not. This is the difference between measuring a datum shift and averaging a
+    datum shift together with the city's construction history.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 06 -->
+<section>
+  <div class="eyebrow">06 · AI/ML spatial matching</div>
+  <h2>No labelled truth set exists, so the matcher builds its own</h2>
+  <p>There is no public ground-truth correspondence set for Indian cadastral layers. The matcher
+  is therefore trained by programmatic weak supervision and then self-trained, and both stages
+  are reported rather than folded into a single accuracy number.</p>
+
+  <div class="panel">
+    <div class="figure-title">GCC municipal survey ↔ Google Open Buildings extraction</div>
+    <div class="figure-sub">The large pair: 55,810 × 70,776 possible combinations, reduced before a single feature is computed.</div>
+    <table>
+      <tbody>
+        <tr><td>Possible pairs</td><td class="n"><b>3.95 × 10⁹</b></td></tr>
+        <tr><td>Candidate pairs after blocking</td><td class="n">350,750</td></tr>
+        <tr><td><b>Blocking reduction</b></td><td class="n"><b>99.991%</b></td></tr>
+        <tr><td>Weak labels generated</td><td class="n">23,034 <span class="pill neutral">10,637 pos · 12,397 neg</span></td></tr>
+        <tr><td>Pairs the labelling functions abstained on</td><td class="n">327,716</td></tr>
+        <tr><td>Pseudo-labels added by self-training</td><td class="n">208,495</td></tr>
+        <tr><td>5-fold CV accuracy / precision / recall</td><td class="n">0.9999 / 0.9998 / 1.0000</td></tr>
+        <tr><td>AUC · expected calibration error</td><td class="n"><b>1.0000</b> · <b>0.0002</b></td></tr>
+        <tr><td>Accepted matches</td><td class="n">34,697 <span class="pill neutral">mean p = 0.999</span></td></tr>
+        <tr><td>Elapsed</td><td class="n">101.1 s</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="figure-title">Cardinality of the accepted set — what the two departments actually disagree about</div>
+    <table>
+      <thead><tr><th>Relationship</th><th class="n">Count</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>1 : 1</td><td class="n">33,723</td><td>both sources agree this is one building</td></tr>
+        <tr><td>1 : N</td><td class="n">616</td><td>the extraction split what the survey holds as one structure</td></tr>
+        <tr><td>N : 1</td><td class="n">408</td><td>the extraction merged what the survey holds as several</td></tr>
+        <tr><td>unmatched, survey only</td><td class="n">21,415</td><td>the extraction missed these</td></tr>
+        <tr><td>unmatched, extraction only</td><td class="n">35,857</td><td>not present in the municipal survey</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="figure-title">TNGIS ↔ NCSCM cadastral compilations</div>
+    <table>
+      <tbody>
+        <tr><td>Candidate pairs</td><td class="n">19,744</td></tr>
+        <tr><td>Accepted matches</td><td class="n">1,465 <span class="pill neutral">1,338 one-to-one · 132 amalgamations</span></td></tr>
+        <tr><td>AUC · calibration error</td><td class="n">1.0000 · 0.0002</td></tr>
+        <tr><td>Unmatched TNGIS parcels</td><td class="n">12,788</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout crit">
+    <div class="t">Read the cross-validation figures correctly, and the low match rate as a finding</div>
+    <p>The CV numbers are measured <strong>against the platform's own weak labels</strong>, not
+    against independent ground truth. They say the model reproduces the labelling functions'
+    decision surface and generalises smoothly across it. They are <strong>not</strong> a claim of
+    100% real-world precision, and we do not present them as one.</p>
+    <p style="margin-top:9px">The two cadastral compilations agree on roughly a tenth of parcels
+    in this AOI. That is the correct answer, not a failure: one is a statewide revenue cadastre and
+    the other a coastal-zone management compilation, produced for different purposes.
+    <strong>A platform reporting a high match rate here would be wrong.</strong></p>
+  </div>
+</section>
+
+<!-- ================================================================== 07 -->
+<section>
+  <div class="eyebrow">07 · Conflict resolution</div>
+  <h2>42.7% closed automatically. The rest queued, not guessed.</h2>
+
+  <div class="stats">
+    <div class="stat"><div class="v">558,294</div><div class="k">property claims fused</div></div>
+    <div class="stat"><div class="v">36,987</div><div class="k">entities carrying a conflict</div></div>
+    <div class="stat"><div class="v">42.7%</div><div class="k">auto-resolved</div></div>
+    <div class="stat"><div class="v">21,192</div><div class="k">escalated for adjudication</div></div>
+    <div class="stat"><div class="v">839</div><div class="k">refusals by statutory rule R-GEO-01</div></div>
+    <div class="stat"><div class="v">2</div><div class="k">batches the 5,000-case queue groups into</div></div>
+  </div>
+
+  <p>Resolution strategies actually used: fusion on 36,148 contested properties, single-source
+  pass-through on 522,142, unanimous agreement on 4. <strong>Rule R-GEO-01 fired 839 times</strong>
+  — it refuses to fuse competing boundaries more than 10 m apart, on the grounds that a 10 m
+  disagreement is a datum, control or identity error, and automated fusion would launder it into
+  a confident false answer. Those cases go to a human with both boundaries and their provenance.</p>
+
+  <div class="callout warn">
+    <div class="t">The escalation rate is high, and it is honest</div>
+    <p><strong>Two thirds of entities in this AOI are known to only one source</strong> (70,486 of
+    106,077 single-source; corroboration rate 33.6%), and where two sources do overlap they
+    frequently disagree beyond what their own declared accuracies justify. A platform reporting
+    95% auto-resolution on this corpus would be hiding disagreement, not resolving it.</p>
+    <p style="margin-top:9px">The batching is what makes the remainder tractable: 5,000 queued
+    cases group into <strong>2 batches by cause</strong>, so an officer settles one <em>kind</em> of
+    disagreement at a time — roughly 125 officer-hours at 90 seconds a decision — and each
+    decision feeds back as a training example and a Beta posterior update to that source's
+    empirical reliability.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 08 -->
+<section>
+  <div class="eyebrow">08 · Confidence</div>
+  <h2>Nothing in central Chennai reaches grade A or B — and that is the finding</h2>
+
+  <div class="panel">
+    <div class="figure-title">Six dimensions, scored per feature, across all 106,077</div>
+    <table>
+      <thead><tr><th>Dimension</th><th class="n">Mean</th><th style="width:36%"></th></tr></thead>
+      <tbody>
+        <tr><td>Lineage integrity</td><td class="n">1.000</td><td><div class="bar"><i style="width:100%"></i></div></td></tr>
+        <tr><td>Topological</td><td class="n">0.9997</td><td><div class="bar"><i style="width:99.97%"></i></div></td></tr>
+        <tr><td>Temporal currency</td><td class="n">0.734</td><td><div class="bar"><i style="width:73.4%"></i></div></td></tr>
+        <tr><td>Attribute completeness</td><td class="n">0.444</td><td><div class="bar b2"><i style="width:44.4%"></i></div></td></tr>
+        <tr><td>Positional</td><td class="n">0.420</td><td><div class="bar b2"><i style="width:42.0%"></i></div></td></tr>
+        <tr><td><b>Source agreement</b></td><td class="n"><b>0.335</b></td><td><div class="bar b2"><i style="width:33.5%"></i></div></td></tr>
+        <tr><td><b>Composite</b></td><td class="n"><b>0.587</b></td><td><div class="bar"><i style="width:58.7%"></i></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="figure-title">Grade distribution against the NAKSHA 0.5 m urban specification</div>
+    <table>
+      <thead><tr><th>Grade</th><th class="n">Count</th><th class="n">Share</th><th>Disposition</th></tr></thead>
+      <tbody>
+        <tr><td>A — publish without review</td><td class="n">0</td><td class="n">0%</td><td><span class="pill neutral">none reach it</span></td></tr>
+        <tr><td>B — publish, flagged</td><td class="n">0</td><td class="n">0%</td><td><span class="pill neutral">none reach it</span></td></tr>
+        <tr><td>C — desk review</td><td class="n">51,878</td><td class="n">48.9%</td><td><span class="pill warn">an officer at a screen</span></td></tr>
+        <tr><td>D — field verification</td><td class="n">54,199</td><td class="n">51.1%</td><td><span class="pill crit">someone has to go and look</span></td></tr>
+        <tr><td>E — reject</td><td class="n">0</td><td class="n">0%</td><td><span class="pill neutral">nothing is unusable</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout crit">
+    <div class="t">What this actually means</div>
+    <p>The reasons are specific and measurable: the best positionally accurate source available
+    is a <strong>1 m municipal survey</strong>; <strong>66.4% of entities are known to only one
+    source</strong>, so their errors are undetectable by corroboration; and where two sources do
+    exist, they disagree by more than their declared accuracies justify.</p>
+    <p style="margin-top:9px">This is not a failure of the platform. It is the platform doing
+    exactly what it was built for: quantifying, parcel by parcel and ward by ward, the gap that
+    the NAKSHA drone survey exists to close — so survey effort can be aimed where the evidence
+    says it is needed rather than spread uniformly. <strong>The grade map is a plan for where to
+    fly first.</strong> A harmonisation platform whose first run reported that everything was fine
+    would not be measuring anything.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 09 -->
+<section>
+  <div class="eyebrow">09 · Change and discrepancy typing</div>
+  <h2>Cross-source mode, because these are departments and not epochs</h2>
+  <p>Running contemporaneous departmental layers in temporal mode would raise a demolition notice
+  for every building one department happens not to hold — 21,415 false mutations from one layer
+  pair alone. Typed cross-source mode instead reports what kind of disagreement each one is.</p>
+
+  <div class="panel">
+    <div class="figure-title">GCC ↔ Google Open Buildings — 91,969 discrepancies, 33,530 actionable</div>
+    <table>
+      <thead><tr><th>Type</th><th class="n">Count</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td><code>SOURCE_COMMISSION</code></td><td class="n">35,857</td><td>extraction sees a building the survey does not hold</td></tr>
+        <tr><td><code>GEOMETRIC_DISAGREEMENT</code></td><td class="n">32,512</td><td>both hold it, in different places or shapes</td></tr>
+        <tr><td><code>SOURCE_OMISSION</code></td><td class="n">21,416</td><td>survey holds a building the extraction missed</td></tr>
+        <tr><td><code>POSITIONAL_ONLY</code></td><td class="n">860</td><td><b>suppressed</b> — explained by the layer-wide 3.23 m systematic component</td></tr>
+        <tr><td><code>SUBDIVISION</code></td><td class="n">610</td><td>one structure became several</td></tr>
+        <tr><td><code>AMALGAMATION</code></td><td class="n">408</td><td>several became one</td></tr>
+        <tr><td><code>NO_CHANGE</code></td><td class="n">306</td><td>agreement within tolerance</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <div class="t">The 860 suppressed records are the ones that matter most</div>
+    <p>Those features moved by more than the noise threshold, but the movement is fully explained
+    by a layer-wide systematic shift. They are typed <strong>non-actionable</strong> rather than
+    raised as 860 mutations. Every one of them would otherwise have become an officer's afternoon.</p>
+  </div>
+</section>
+
+<!-- ================================================================== 10 -->
+<section>
+  <div class="eyebrow">10 · Identity and provenance</div>
+  <h2>Identifiers that survive re-survey, and a ledger a citizen can check</h2>
+
+  <div class="panel">
+    <table>
+      <thead><tr><th>Property</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>ULPINs minted</td><td><b>14,614</b>, all distinct — <b>2 snapped-cell collisions disambiguated</b> by an identity-stable nonce <span class="pill ok">unique</span></td></tr>
+        <tr><td>Stability under re-survey</td><td>unchanged under shifts up to ~2 m (tested)</td></tr>
+        <tr><td>Checksum strength</td><td><b>100% of single-character substitutions detected</b>, exhaustively tested over 13 positions × 31 substitutions</td></tr>
+        <tr><td>Ledger chain</td><td><b>20 entries, chain intact</b> — tampering is detected at the exact entry index <span class="pill ok">verified</span></td></tr>
+        <tr><td>Merkle root</td><td class="mono" style="word-break:break-all">74b11afd7cc1a5f588ed6749ccf66144153e092a8ad25e94252dec8737b6cec9</td></tr>
+        <tr><td>Inclusion proofs</td><td>round-trip verified for arbitrary indices; forged leaves rejected</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Buildings assigned to a parcel: <strong>56,166 (61.4%)</strong> across 10,164 parcels.
+  <strong>2,961 parcels show built-up area exceeding the plot area entirely</strong> — reported as
+  a <em>data</em> finding before it is a compliance finding, because either the parcel boundary or
+  the footprints are wrong, and the platform says so instead of issuing 2,961 violations.</p>
+</section>
+
+<!-- ================================================================== 11 -->
+<section>
+  <div class="eyebrow">11 · Scope</div>
+  <h2>What is deliberately not claimed</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:31%">Claim we do not make</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Real-world matcher precision</td><td>Cross-validation is against the platform's own weak labels. No independent labelled correspondence set for Indian cadastral layers exists; constructing one is the single most valuable thing a deploying department could contribute.</td></tr>
+        <tr><td>Positional accuracy better than the sources</td><td>The platform never invents a boundary. Its output is at best as accurate as the best observed source it selected, and it reports which one that was.</td></tr>
+        <tr><td>An Indian float DSM</td><td>None is openly available at the required precision. The DSM → DTM → nDSM chain is proved on a real calibrated surface model (Geobasis NRW DOM1) and labelled as such — never passed off as Indian data.</td></tr>
+        <tr><td>Title, ownership or encumbrance</td><td>This platform harmonises <em>spatial</em> records. A geometric confidence score must not leak into a question about who owns the land; the ULPIN genealogy exists so spatial mutation can be tracked without asserting anything about title.</td></tr>
+        <tr><td>An encroachment determination</td><td>Change restricted to poramboke land is reported as a <em>finding for verification</em>. Rule R-POR-01 escalates; it never determines.</td></tr>
+        <tr><td>A live PostGIS deployment</td><td>The full canonical schema, indexes and loaders exist. The evaluation runs file-backed on purpose, so a reviewer can reproduce it without standing up a database.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================== 12 -->
+<section>
+  <div class="eyebrow">12 · Reproduce it</div>
+  <h2>Everything above, from a clean unpack</h2>
+  <p>No figure in this ledger is transcribed by hand. Each one is read from the run record the
+  pipeline wrote, and the ledger verifies independently of anything claimed here.</p>
+<pre><b># the run record every number above comes from</b>
+cat out/chennai_metro/metrics.json
+
+<b># verify the provenance chain and the Merkle root, independently</b>
+geovax verify --out out/chennai_metro
+  -&gt; chain intact over 20 entries
+  -&gt; 74b11afd7cc1a5f588ed6749ccf66144153e092a8ad25e94252dec8737b6cec9
+
+<b># reproduce the whole run from the real corpus</b>
+make data        <i># fetch ~2.1 GB of real government data, clip to the AOI, checksum it</i>
+make pipeline    <i># the 12-stage harmonisation DAG</i>
+make test        <i># the test suite</i>
+
+<b># or double-click, in order</b>
+1 - Setup and Test.command  ·  4 - Run the Pipeline.command  ·  3 - Harmonisation Console.command</pre>
+</section>
+
+<footer>
+  <div class="wrap" style="padding:0">
+    <b>GEOVAX Evidence Ledger</b> — compiled from
+    <span class="mono">out/chennai_metro/metrics.json</span>, run
+    <span class="mono">d41789a8</span>, completed 2026-09-06 16:49 UTC on 2 vCPU / 7 GB.
+    Team Perpetually Curious · SIH 2026 · PS 26013 · Ministry of Rural Development, DoLR.
+    Figures for the raster tier, terrain chain and null-change experiment are recorded separately
+    in <span class="mono">docs/08-evaluation-results.md</span>.
+  </div>
+</footer>
+
+</div>
+</body>
+</html>

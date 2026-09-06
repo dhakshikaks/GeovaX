@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PS 26013, Marked Up</title>
+<style>
+/* ========================================================== tokens · light */
+:root{
+  color-scheme: light;
+  --ground:#e9eae6; --paper:#fdfdfb; --paper-2:#f4f5f1; --paper-3:#e6e8e2;
+  --rule:#cbcec5; --rule-2:#dfe1da;
+  --ink:#15170f; --ink-2:#474b3d; --ink-3:#727766;
+  --accent:#2e5d4f;
+
+  --c-bind:#a5271c;   --h-bind:#fbd9d3;
+  --c-input:#2f45a0;  --h-input:#d7ddf8;
+  --c-cap:#166b48;    --h-cap:#cfeddf;
+  --c-lat:#9a6b06;    --h-lat:#fbecc4;
+  --c-out:#0c6a7c;    --h-out:#cdeaf1;
+  --c-gov:#7a2f86;    --h-gov:#f0d9f4;
+
+  --lift:0 1px 1px rgba(21,23,15,.04), 0 18px 40px -30px rgba(21,23,15,.5);
+}
+@media (prefers-color-scheme:dark){
+ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --ground:#0e100b; --paper:#171a14; --paper-2:#1e221a; --paper-3:#272c22;
+  --rule:#333829; --rule-2:#232719;
+  --ink:#eceee4; --ink-2:#adb2a1; --ink-3:#7d8474;
+  --accent:#7fc0a8;
+  --c-bind:#f0897a;   --h-bind:#3d1712;
+  --c-input:#93a5f4;  --h-input:#191f45;
+  --c-cap:#5cc496;    --h-cap:#0f3025;
+  --c-lat:#e0b155;    --h-lat:#3a2c0c;
+  --c-out:#5fc2d6;    --h-out:#0d323a;
+  --c-gov:#d194dd;    --h-gov:#341440;
+  --lift:0 1px 1px rgba(0,0,0,.6), 0 18px 40px -30px rgba(0,0,0,.95);
+ }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#0e100b; --paper:#171a14; --paper-2:#1e221a; --paper-3:#272c22;
+  --rule:#333829; --rule-2:#232719;
+  --ink:#eceee4; --ink-2:#adb2a1; --ink-3:#7d8474;
+  --accent:#7fc0a8;
+  --c-bind:#f0897a;   --h-bind:#3d1712;
+  --c-input:#93a5f4;  --h-input:#191f45;
+  --c-cap:#5cc496;    --h-cap:#0f3025;
+  --c-lat:#e0b155;    --h-lat:#3a2c0c;
+  --c-out:#5fc2d6;    --h-out:#0d323a;
+  --c-gov:#d194dd;    --h-gov:#341440;
+  --lift:0 1px 1px rgba(0,0,0,.6), 0 18px 40px -30px rgba(0,0,0,.95);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:400 16px/1.6 "Barlow",-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 28px 90px}
+@media(max-width:640px){.wrap{padding:0 16px 60px}}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,"DejaVu Sans Mono",monospace}
+a{color:var(--accent)}
+
+/* ------------------------------------------------------------------ header */
+header{padding:48px 0 0}
+.kicker{font:600 11px/1 "SF Mono",ui-monospace,Menlo,monospace;letter-spacing:.19em;
+  text-transform:uppercase;color:var(--ink-3)}
+h1{margin:16px 0 0;font-family:"Iowan Old Style","Source Serif 4",Georgia,"DejaVu Serif",serif;
+  font-weight:700;font-size:clamp(30px,4.7vw,48px);line-height:1.05;letter-spacing:-.02em;
+  text-wrap:balance}
+p.lede{margin:16px 0 0;max-width:74ch;font-size:clamp(15px,1.75vw,18px);color:var(--ink-2)}
+
+/* ------------------------------------------------------------------ legend */
+.legend{margin:30px 0 0;background:var(--paper);border:1px solid var(--rule);
+  border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.hint{font:600 10.5px/1 "SF Mono",ui-monospace,Menlo,monospace;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  font:500 13.5px/1 inherit;color:var(--ink);background:var(--paper-2);
+  border:1px solid var(--rule);border-radius:999px;padding:7px 13px}
+.chip .sw{width:11px;height:11px;border-radius:3px;flex:none}
+.chip .ct{font:500 11px/1 "SF Mono",monospace;color:var(--ink-3)}
+.k-bind  .sw{background:var(--h-bind);border:1px solid var(--c-bind)}
+.k-input .sw{background:var(--h-input);border:1px solid var(--c-input)}
+.k-cap   .sw{background:var(--h-cap);border:1px solid var(--c-cap)}
+.k-lat   .sw{background:var(--h-lat);border:1px solid var(--c-lat)}
+.k-out   .sw{background:var(--h-out);border:1px solid var(--c-out)}
+.k-gov   .sw{background:var(--h-gov);border:1px solid var(--c-gov)}
+.chip[aria-pressed="true"]{background:var(--paper-3);border-color:var(--ink-3)}
+
+/* -------------------------------------------------------------- the document */
+.doc{margin:26px 0 0;background:var(--paper);border:1px solid var(--rule);
+  border-radius:14px;overflow:hidden;box-shadow:var(--lift)}
+.field{display:grid;grid-template-columns:196px 1fr;border-top:1px solid var(--rule-2)}
+.field:first-child{border-top:0}
+@media(max-width:560px){.field{grid-template-columns:1fr}}
+.fname{padding:20px 18px;background:var(--paper-2);border-right:1px solid var(--rule-2);
+  font:600 12px/1.35 "SF Mono",ui-monospace,Menlo,monospace;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3)}
+.fval{padding:20px 22px;font-family:"Iowan Old Style","Source Serif 4",Georgia,"DejaVu Serif",serif;
+  font-size:16.5px;line-height:1.68}
+.fval p{margin:0 0 14px}
+.fval p:last-child{margin-bottom:0}
+p.big{font-size:21px;line-height:1.35;font-weight:600;margin:0}
+p.big.mono{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:19px;letter-spacing:.02em}
+.blab{display:block;margin:4px 0 10px;font-family:"Barlow",-apple-system,sans-serif;
+  font:600 10.5px/1 "SF Mono",ui-monospace,Menlo,monospace;letter-spacing:.17em;
+  text-transform:uppercase;color:var(--accent)}
+.blab.subhead{margin-top:22px}
+ul.plist{margin:0 0 14px;padding-left:20px}
+ul.plist li{margin:0 0 5px}
+
+mark{padding:.1em .18em;border-radius:3px;background:transparent;color:inherit;
+  box-decoration-break:clone;-webkit-box-decoration-break:clone}
+mark.m-bind {background:var(--h-bind);  box-shadow:inset 0 -2px 0 var(--c-bind)}
+mark.m-input{background:var(--h-input); box-shadow:inset 0 -2px 0 var(--c-input)}
+mark.m-cap  {background:var(--h-cap);   box-shadow:inset 0 -2px 0 var(--c-cap)}
+mark.m-lat  {background:var(--h-lat);   box-shadow:inset 0 -2px 0 var(--c-lat)}
+mark.m-out  {background:var(--h-out);   box-shadow:inset 0 -2px 0 var(--c-out)}
+mark.m-gov  {background:var(--h-gov);   box-shadow:inset 0 -2px 0 var(--c-gov)}
+body.filtering mark{background:transparent;box-shadow:none;color:var(--ink-3)}
+body.filtering mark.on{color:var(--ink)}
+body.filtering mark.m-bind.on {background:var(--h-bind);  box-shadow:inset 0 -2px 0 var(--c-bind)}
+body.filtering mark.m-input.on{background:var(--h-input); box-shadow:inset 0 -2px 0 var(--c-input)}
+body.filtering mark.m-cap.on  {background:var(--h-cap);   box-shadow:inset 0 -2px 0 var(--c-cap)}
+body.filtering mark.m-lat.on  {background:var(--h-lat);   box-shadow:inset 0 -2px 0 var(--c-lat)}
+body.filtering mark.m-out.on  {background:var(--h-out);   box-shadow:inset 0 -2px 0 var(--c-out)}
+body.filtering mark.m-gov.on  {background:var(--h-gov);   box-shadow:inset 0 -2px 0 var(--c-gov)}
+
+/* ------------------------------------------------------------- annotation */
+.anno{margin:16px 0 18px;padding:13px 16px;background:var(--paper-2);
+  border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
+  font-family:"Barlow",-apple-system,"Segoe UI",sans-serif;font-size:14.5px;line-height:1.55;
+  color:var(--ink-2)}
+.anno .t{display:block;font-weight:700;color:var(--ink);margin-bottom:4px;
+  font-size:13px;letter-spacing:.01em}
+.anno code{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+  background:var(--paper-3);padding:1px 5px;border-radius:3px}
+.anno b{color:var(--ink)}
+
+/* ------------------------------------------------------------------ closing */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:26px 0 0}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:12px;
+  padding:18px 20px;box-shadow:var(--lift)}
+.card h3{margin:0 0 8px;font-size:15px;letter-spacing:.01em}
+.card.bind h3{color:var(--c-bind)}
+.card.lat h3{color:var(--c-lat)}
+.card p{margin:0 0 9px;font-size:14.5px;line-height:1.55;color:var(--ink-2)}
+.card p:last-child{margin:0}
+.sechint{margin:34px 0 0;font-size:14px;color:var(--ink-3);text-align:center}
+
+/* -------------------------------------------------------------------- print */
+@page{size:A4;margin:14mm 12mm}
+@media print{
+  body{background:#fff}
+  .legend{display:none}
+  .doc,.card{box-shadow:none;break-inside:auto}
+  .field{break-inside:auto}
+  .fval p,ul.plist,.blab{break-inside:avoid}
+  .anno{break-inside:avoid}
+  mark{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Problem statement 26013 · Ministry of Rural Development, DoLR · Smart Automation</div>
+  <h1>Every word in PS 26013 that carries weight</h1>
+  <p class="lede">
+    The statement, reproduced in full and marked up. Six colours separate the language
+    that <b>binds</b> you from the language that <b>protects</b> you — because the
+    permissive words are worth as much as the mandatory ones, and they are the half
+    most teams read straight past. <b>Tap a colour to isolate it.</b>
+  </p>
+</header>
+
+<div class="legend">
+  <div class="hint">Filter the markup</div>
+  <div class="chips" id="chips">
+    <button class="chip k-bind"  aria-pressed="false" data-k="bind"><span class="sw"></span>Binding — pass or fail <span class="ct"></span></button>
+    <button class="chip k-input" aria-pressed="false" data-k="input"><span class="sw"></span>Datasets you must ingest <span class="ct"></span></button>
+    <button class="chip k-cap"   aria-pressed="false" data-k="cap"><span class="sw"></span>Capabilities named <span class="ct"></span></button>
+    <button class="chip k-lat"   aria-pressed="false" data-k="lat"><span class="sw"></span>Latitude — your defence <span class="ct"></span></button>
+    <button class="chip k-out"   aria-pressed="false" data-k="out"><span class="sw"></span>Outcomes you are judged on <span class="ct"></span></button>
+    <button class="chip k-gov"   aria-pressed="false" data-k="gov"><span class="sw"></span>Programme, scope &amp; governance <span class="ct"></span></button>
+  </div>
+</div>
+
+<!-- =============================================================== document -->
+<article class="doc" id="doc">
+
+  <div class="field">
+    <div class="fname">Problem Statement ID</div>
+    <div class="fval"><p class="big mono">26013</p></div>
+  </div>
+
+  <div class="field">
+    <div class="fname">Problem Statement Title</div>
+    <div class="fval">
+      <p class="big">Automated <mark class="m-bind">lntegration</mark> and
+      <mark class="m-bind">lntelligent Harmonization</mark> of
+      <mark class="m-gov">Multi-source Geospatial Data</mark> for
+      <mark class="m-gov">urban Land Record Management</mark>.</p>
+      <div class="anno">
+        <span class="t">Reproduce the title exactly as filed</span>
+        The published statement writes a lowercase <b>l</b> where a capital <b>I</b> belongs
+        — "lntegration", "lntelligent", "lmagery", "Al" for AI — and mid-word capitals in
+        "incorPorate" and "footPrint". <b>That is SIH's own typography, carried from the
+        source document.</b> Quote it verbatim on the title slide; a tidied title stops
+        matching the PS you filed against. Everywhere else, write it correctly.
+      </div>
+    </div>
+  </div>
+
+  <div class="field">
+    <div class="fname">Description</div>
+    <div class="fval">
+
+      <span class="blab">Background</span>
+      <p>Urban land administration and cadastral management involve integration of
+      <mark class="m-gov">multiple spatial and non-spatial datasets generated from various
+      departments, agencies, and survey mechanisms</mark>. Under modern land governance
+      programmes <mark class="m-lat">such as</mark> the
+      <mark class="m-gov">NAKSHA Programme</mark>, large volumes of geospatial data are
+      being generated through <mark class="m-input">drone surveys</mark>,
+      <mark class="m-input">Orthorectified lmagery (ORl)</mark>,
+      <mark class="m-input">DSM/DTM datasets</mark>,
+      <mark class="m-input">Ground Truthing (GT)</mark>,
+      <mark class="m-input">GNSS surveys</mark>,
+      <mark class="m-input">municipal records</mark>,
+      <mark class="m-input">utility databases</mark>, and
+      <mark class="m-input">revenue land records</mark>.</p>
+
+      <p>At present, <mark class="m-bind">harmonization and integration of these datasets
+      largely depend on manual GIS workflows, which are time-consuming and prone to
+      errors</mark>. With increasing availability of Al, GeoAl, and automated spatial
+      processing technologies, there is
+      <mark class="m-lat">significant scope for development of</mark> an intelligent system
+      capable of <mark class="m-bind">automatically integrating and synchronizing
+      multi-source geospatial datasets with feature-extracted cadastral data</mark>.</p>
+
+      <div class="anno">
+        <span class="t">The pitch is written for you here</span>
+        Three words carry the whole business case: <b>manual</b>, <b>time-consuming</b>,
+        <b>prone to errors</b>. That is DoLR's stated pain, so those are the three your
+        impact slide must answer. Note what the statement never asks for: it does not ask
+        you to be <i>fast</i>, and it does not ask you to be <i>right</i> in some absolute
+        sense — it asks you to remove the manual step without introducing error. A platform
+        that automates the reconciliation and then <b>shows why each decision was made</b>
+        answers both halves at once.
+      </div>
+
+      <span class="blab subhead">Description</span>
+      <p>The proposed solution should develop an
+      <mark class="m-bind">Al-enabled geospatial integration platform capable of
+      automatically integrating, harmonizing, validating, and synchronizing multiple
+      land-related datasets with Al-generated feature extraction outputs</mark>.</p>
+
+      <div class="anno">
+        <span class="t">The single sentence a jury can disqualify you on</span>
+        Four verbs, and they are not synonyms. <b>Integrating</b> is moving data together.
+        <b>Harmonizing</b> is making it agree. <b>Validating</b> is proving it agrees.
+        <b>Synchronizing</b> is keeping it agreeing over time. Most submissions build the
+        first and gesture at the rest. Be able to point at a module for each one, and say
+        plainly which of the four is a design rather than a deployment.
+        The clause also says <b>"with Al-generated feature extraction outputs"</b> — a
+        GeoAI layer is not optional decoration here, it is a named input.
+      </div>
+
+      <span class="blab subhead">The system should support integration of</span>
+      <ul class="plist">
+        <li><mark class="m-input">Drone imagery</mark></li>
+        <li><mark class="m-input">Orthorectified lmagery (ORl)</mark></li>
+        <li><mark class="m-input">DSM/DTM datasets</mark></li>
+        <li><mark class="m-input">Existing cadastral maps</mark></li>
+        <li><mark class="m-input">Revenue records</mark></li>
+        <li><mark class="m-input">Municipal GIS layers</mark></li>
+        <li><mark class="m-input">Utility network data</mark></li>
+        <li><mark class="m-input">Ground Truthing (GT) datasets</mark></li>
+        <li><mark class="m-input">GNSS/CORS survey data</mark></li>
+        <li><mark class="m-input">Building footPrint datasets</mark></li>
+      </ul>
+
+      <div class="anno">
+        <span class="t">Count them — there are ten, and each one is a checkbox</span>
+        Ten named inputs, and <b>an input with no real dataset behind it is an input with no
+        evidence</b>. A jury reads this list as a checklist. For each, be ready to name the
+        actual file, its authority and its licence — not a connector that "would accept" it.
+        Where a real Indian dataset does not exist openly, say so and show the closest real
+        one you did use. A stated gap survives a question; a silent one does not.
+      </div>
+
+      <span class="blab subhead">The solution should incorPorate</span>
+      <ul class="plist">
+        <li><mark class="m-cap">Al/ML-based spatial matching algorithms</mark></li>
+        <li><mark class="m-cap">Automated topology correction</mark></li>
+        <li><mark class="m-cap">lntelligent attribute mapping</mark></li>
+        <li><mark class="m-cap">Geo-referencing and coordinate transformation engine</mark></li>
+        <li><mark class="m-cap">Change detection mechanisms</mark></li>
+        <li><mark class="m-cap">Spatial conflict resolution framework</mark></li>
+        <li><mark class="m-cap">Confidence scoring for integrated outputs</mark></li>
+      </ul>
+
+      <div class="anno">
+        <span class="t">Seven capabilities, and the last two are the whole problem</span>
+        The first five are engineering. <b>Spatial conflict resolution</b> and
+        <b>confidence scoring</b> are the two that decide whether this is a land-records
+        platform or an ETL pipeline with good marketing. The statement puts them last but
+        they are what "harmonize" actually means: when four sources disagree about one
+        boundary, something must decide, and something must say how sure it is. Build those
+        two first and the other five become their inputs.
+      </div>
+
+      <span class="blab subhead">Expected Solution</span>
+      <p>The expected outcome is development of an
+      <mark class="m-bind">intelligent geospatial integration framework capable of
+      automatically harmonizing multi-source land-related datasets with Al-generated
+      feature extraction outputs</mark>. The final solution should:</p>
+      <ul class="plist">
+        <li><mark class="m-out">Reduce manual GIS integration efforts</mark></li>
+        <li><mark class="m-out">lmprove accuracy and consistency of urban land records</mark></li>
+        <li><mark class="m-out">Enable seamless inter-departmental spatial data exchange</mark></li>
+        <li><mark class="m-out">Accelerate cadastral finalization processes</mark></li>
+        <li><mark class="m-out">Improve interoperability of urban land information systems</mark></li>
+        <li><mark class="m-out">Support standardized digital land governance</mark></li>
+      </ul>
+
+      <div class="anno">
+        <span class="t">These six are the marking scheme</span>
+        Outcomes, not features — and five of the six are institutional rather than
+        technical. <b>"Seamless inter-departmental exchange"</b> and
+        <b>"interoperability"</b> are answered by a standard, not by an API you invented:
+        if a revenue officer can open your endpoint in QGIS with no plugin, that clause is
+        met and demonstrable in ten seconds. <b>"Accelerate cadastral finalization"</b> is
+        the one to quantify — finalisation is blocked by disputed parcels, so the honest
+        measure is how many disagreements you close automatically and how well you rank the
+        ones you cannot.
+      </div>
+
+      <span class="blab subhead">Suggested Technologies</span>
+      <p><mark class="m-lat">Artificial lntelligence (Al) · Machine Learning (ML) · GeoAl ·
+      GIS &amp; Web-GlS · Spatial Databases · ETL Automation · Computer Vision ·
+      Cloud Computing · Spatial Analytics · API lntegration Frameworks</mark></p>
+
+      <div class="anno">
+        <span class="t">The word "suggested" is doing a lot of work</span>
+        This list is <b>latitude, not obligation</b>. Nothing here says cloud, and nothing
+        here says deep learning. If your defensible answer is boosted trees on a laptop and
+        an on-premises deployment because a district office has neither GPUs nor bandwidth,
+        that is <i>within</i> the statement and it is a stronger answer than a cloud
+        diagram. Use the list to show breadth where you genuinely have it, and say why you
+        declined the rest.
+      </div>
+
+    </div>
+  </div>
+
+  <div class="field">
+    <div class="fname">Organization</div>
+    <div class="fval"><p><mark class="m-gov">Ministry of Rural Development</mark></p></div>
+  </div>
+  <div class="field">
+    <div class="fname">Department</div>
+    <div class="fval"><p><mark class="m-gov">Dept of land resources (DoLR)</mark></p></div>
+  </div>
+  <div class="field">
+    <div class="fname">Category</div>
+    <div class="fval"><p>Software</p></div>
+  </div>
+  <div class="field">
+    <div class="fname">Theme</div>
+    <div class="fval"><p>Smart Automation</p></div>
+  </div>
+
+</article>
+
+<div class="two">
+  <div class="card bind">
+    <h3>What binds you</h3>
+    <p>Four verbs — <b>integrate, harmonize, validate, synchronize</b> — over
+    <b>ten named datasets</b>, incorporating <b>seven named capabilities</b>, judged
+    against <b>six stated outcomes</b>. That is 27 checkable clauses, and the AI-generated
+    feature-extraction input is named twice, so it is not decoration.</p>
+    <p>The only sentence written as a hard constraint is the platform definition itself.
+    Everything else is <i>should</i>, and <i>should</i> is answerable with a stated
+    limitation.</p>
+  </div>
+  <div class="card lat">
+    <h3>What protects you</h3>
+    <p><b>"Suggested Technologies"</b> — the ten-item stack is explicitly suggested. You
+    owe the outcomes, not the toolchain.</p>
+    <p><b>"such as"</b> before NAKSHA and before the dataset list — the programme is an
+    example of the context, not a required integration.</p>
+    <p><b>"significant scope for development of"</b> — the background frames this as an
+    opportunity, which is what lets you scope one AOI honestly instead of promising a
+    nation and demonstrating nothing.</p>
+  </div>
+</div>
+
+<p class="sechint">Reproduced from the published problem statement · marked up for GEOVAX,
+Team Perpetually Curious · no wording altered</p>
+
+</div>
+
+<script>
+(function(){
+  var chips = document.getElementById('chips');
+  var doc   = document.getElementById('doc');
+  var active = new Set();
+  // counts
+  ['bind','input','cap','lat','out','gov'].forEach(function(k){
+    var n = doc.querySelectorAll('mark.m-'+k).length;
+    var b = chips.querySelector('[data-k="'+k+'"] .ct');
+    if (b) b.textContent = n;
+  });
+  chips.addEventListener('click', function(e){
+    var btn = e.target.closest('.chip'); if(!btn) return;
+    var k = btn.dataset.k;
+    if(active.has(k)){active.delete(k); btn.setAttribute('aria-pressed','false');}
+    else {active.add(k); btn.setAttribute('aria-pressed','true');}
+    document.body.classList.toggle('filtering', active.size>0);
+    doc.querySelectorAll('mark').forEach(function(m){
+      var on=false;
+      active.forEach(function(k){ if(m.classList.contains('m-'+k)) on=true; });
+      m.classList.toggle('on', on);
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GEOVAX Conformance Record</title>
+<style>
+:root{
+  color-scheme: light;
+  --ground:#eceef4; --paper:#fbfbfd; --paper-2:#f2f3f8; --paper-3:#e5e8f1;
+  --rule:#c8ccdc; --rule-2:#dee1ec;
+  --ink:#12172b; --ink-2:#454c68; --ink-3:#6f7693;
+  --accent:#26346b;  --accent-bg:#e1e6f4;
+  --brass:#8a5f16;   --brass-bg:#f2e9d6;
+  --met:#15614a;     --met-bg:#dbece4;
+  --bound:#845210;   --bound-bg:#f4e7d2;
+  --lift:0 1px 1px rgba(18,23,43,.04), 0 16px 36px -28px rgba(18,23,43,.55);
+}
+@media (prefers-color-scheme:dark){
+ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --ground:#0b0d15; --paper:#141827; --paper-2:#1a1f31; --paper-3:#232941;
+  --rule:#2c3250; --rule-2:#1f2436;
+  --ink:#e7e9f4; --ink-2:#a6acc3; --ink-3:#78809d;
+  --accent:#93a4ec;  --accent-bg:#181e3a;
+  --brass:#cfa057;   --brass-bg:#2a2113;
+  --met:#4cbc93;     --met-bg:#0f2c23;
+  --bound:#d2a054;   --bound-bg:#2b2011;
+  --lift:0 1px 1px rgba(0,0,0,.5), 0 16px 36px -28px rgba(0,0,0,.95);
+ }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#0b0d15; --paper:#141827; --paper-2:#1a1f31; --paper-3:#232941;
+  --rule:#2c3250; --rule-2:#1f2436;
+  --ink:#e7e9f4; --ink-2:#a6acc3; --ink-3:#78809d;
+  --accent:#93a4ec;  --accent-bg:#181e3a;
+  --brass:#cfa057;   --brass-bg:#2a2113;
+  --met:#4cbc93;     --met-bg:#0f2c23;
+  --bound:#d2a054;   --bound-bg:#2b2011;
+  --lift:0 1px 1px rgba(0,0,0,.5), 0 16px 36px -28px rgba(0,0,0,.95);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:400 16px/1.65 -apple-system,"Segoe UI","Chivo","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:0 30px 100px}
+@media(max-width:680px){.wrap{padding:0 17px 70px}}
+.mono,code,pre,.fig{font-family:"SF Mono",ui-monospace,Menlo,"DejaVu Sans Mono",monospace;
+  font-variant-numeric:tabular-nums}
+code{font-size:.88em;color:var(--ink);background:var(--paper-3);padding:1px 5px;border-radius:3px}
+a{color:var(--accent)}
+
+.masthead{padding:52px 0 0}
+.stamp{display:inline-flex;align-items:center;gap:9px;
+  font:500 11px/1 "SF Mono",monospace;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--brass);border:1px solid var(--brass);background:var(--brass-bg);
+  padding:6px 12px;border-radius:99px}
+h1{margin:20px 0 0;font-family:"Spectral",Georgia,"DejaVu Serif",serif;font-weight:700;
+  font-size:clamp(31px,5vw,50px);line-height:1.04;letter-spacing:-.02em;text-wrap:balance}
+.sub{margin:15px 0 0;max-width:74ch;font-size:clamp(15px,1.85vw,18.5px);color:var(--ink-2)}
+.meta{margin:22px 0 0;display:flex;flex-wrap:wrap;gap:7px 20px;font-size:12.5px;color:var(--ink-3)}
+.meta b{color:var(--ink-2);font-weight:600}
+
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));gap:1px;
+  background:var(--rule-2);border:1px solid var(--rule);border-radius:13px;overflow:hidden;
+  margin:26px 0 0;box-shadow:var(--lift)}
+.tally .c{background:var(--paper);padding:16px 17px}
+.tally .v{font-family:"Spectral",Georgia,serif;font-size:29px;font-weight:700;line-height:1;
+  letter-spacing:-.02em}
+.tally .k{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.35}
+.tally .c.met .v{color:var(--met)}
+.tally .c.part .v{color:var(--bound)}
+
+section{padding:42px 0 0}
+h2{font-family:"Spectral",Georgia,serif;font-size:clamp(21px,2.7vw,29px);line-height:1.16;
+  margin:0 0 8px;letter-spacing:-.014em}
+h3{font-size:15.5px;margin:22px 0 6px;letter-spacing:.005em}
+.eyebrow{font:700 11px/1 "SF Mono",monospace;letter-spacing:.17em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:9px}
+p{margin:0 0 14px;max-width:78ch;color:var(--ink-2)}
+strong{color:var(--ink)}
+
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:13px;
+  padding:4px 20px 8px;margin:18px 0 0;box-shadow:var(--lift)}
+table{width:100%;border-collapse:collapse;font-size:13.6px}
+th,td{padding:9px 9px;text-align:left;border-bottom:1px solid var(--rule-2);vertical-align:top}
+th{font:700 10.5px/1.3 "SF Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule)}
+tbody tr:last-child td{border-bottom:0}
+td.cl{font-weight:600;color:var(--ink);width:23%}
+td.st{width:96px;white-space:nowrap}
+.pill{display:inline-block;font:700 10.5px/1 "SF Mono",monospace;letter-spacing:.05em;
+  padding:5px 9px;border-radius:5px;white-space:nowrap}
+.pill.met{background:var(--met-bg);color:var(--met)}
+.pill.part{background:var(--bound-bg);color:var(--bound)}
+
+.note{margin:18px 0 0;padding:15px 18px;background:var(--paper);border:1px solid var(--rule);
+  border-left:3px solid var(--accent);border-radius:0 11px 11px 0;box-shadow:var(--lift)}
+.note .t{font-weight:700;color:var(--ink);font-size:14px;margin-bottom:5px}
+.note p{margin:0;font-size:14.5px}
+.note.brass{border-left-color:var(--brass)}
+
+pre{margin:16px 0 0;padding:15px 17px;background:var(--paper-2);border:1px solid var(--rule-2);
+  border-radius:11px;overflow-x:auto;font-size:12.5px;line-height:1.62;color:var(--ink-2)}
+pre b{color:var(--ink)}
+
+footer{margin-top:56px;padding-top:26px;border-top:1px solid var(--rule);
+  font-size:13px;color:var(--ink-3)}
+
+@page{size:A4;margin:13mm 11mm}
+@media print{
+  body{background:#fff}
+  .card,.tally{box-shadow:none;break-inside:auto}
+  .note{box-shadow:none;break-inside:avoid}
+  tr{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .pill{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="stamp">Conformance Record · PS 26013 · re-verified 6 September 2026</div>
+  <h1>Thirty-seven clauses. Thirty-one met in full.</h1>
+  <p class="sub">Problem statement 26013 is read here as what it is — a specification. Every
+  noun it names is a clause, every clause has a status, and the six that are not met in full say
+  so in their own row rather than in a footnote. The partial ones are the interesting half.</p>
+  <div class="meta">
+    <span><b>Statement</b> Automated Integration and Intelligent Harmonisation of Multi-source
+      Geospatial Data for Urban Land Record Management</span>
+    <span><b>Organisation</b> Ministry of Rural Development · DoLR</span>
+    <span><b>Evidence</b> <span class="mono">out/chennai_metro/metrics.json</span>, run
+      <span class="mono">d41789a8</span></span>
+  </div>
+</div>
+
+<div class="tally">
+  <div class="c"><div class="v">37</div><div class="k">clauses extracted from the statement</div></div>
+  <div class="c met"><div class="v">31</div><div class="k">met in full, with evidence</div></div>
+  <div class="c part"><div class="v">6</div><div class="k">partial, and stated as partial</div></div>
+  <div class="c"><div class="v">0</div><div class="k">claimed without something to point at</div></div>
+</div>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Method</div>
+  <h2>Re-verified from source, today</h2>
+  <p>Nothing in this record is quoted from an earlier document. Each clause was checked against
+  one of three things: a module in the shipped tree, a figure in the run record the pipeline
+  wrote, or an endpoint that answers. Where the check was a judgement rather than a fact — "is
+  this <em>enough</em> to count as met?" — the row is marked partial and the reasoning is in it.</p>
+  <p>The tree as counted today: <strong>69 Python modules, 18,801 lines</strong> across
+  <code>backend/GeovaX/</code>, <strong>130 test functions</strong> in seven test modules, and
+  <strong>40 HTTP endpoints</strong> including the five OGC API - Features routes.</p>
+</section>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Clause group 1 of 5 · four verbs</div>
+  <h2>The platform definition</h2>
+  <p>"An Al-enabled geospatial integration platform capable of <strong>automatically integrating,
+  harmonizing, validating, and synchronizing</strong> multiple land-related datasets with
+  Al-generated feature extraction outputs." Four verbs, and they are not synonyms.</p>
+  <div class="card">
+    <table>
+      <thead><tr><th>Clause</th><th class="st">Status</th><th>What answers it</th></tr></thead>
+      <tbody>
+        <tr><td class="cl">Integrating</td><td class="st"><span class="pill met">met</span></td>
+          <td>Five configured layers ingested and put on one datum in a single run — 14,253 + 1,826 parcels, 55,810 + 70,776 footprints. <code>ingest</code>, <code>crs.engine</code>.</td></tr>
+        <tr><td class="cl">Harmonizing</td><td class="st"><span class="pill met">met</span></td>
+          <td>106,077 entities assembled from 558,294 claims across sources; 36,987 conflicts adjudicated, 42.7% closed automatically. <code>matching</code>, <code>conflict</code>.</td></tr>
+        <tr><td class="cl">Validating</td><td class="st"><span class="pill met">met</span></td>
+          <td>15 topology rules with bounded, refusable repair; six-dimension confidence graded A–E on every feature; hash-chained ledger, 20 entries, chain verified. <code>topology</code>, <code>confidence</code>, <code>core.ledger</code>.</td></tr>
+        <tr><td class="cl">Synchronizing</td><td class="st"><span class="pill part">partial</span></td>
+          <td><code>POST /api/subscriptions</code> and the delivery log are implemented and the AOI / feature-class / change-type / confidence filters exist. <strong>Webhook delivery has not been exercised against a second real department</strong> — until it is, this is a loop-back test, and we say so.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <div class="t">Why "validating" is the one to press us on</div>
+    <p>Most submissions read validate as "check the geometry is valid". Here it means the platform
+    can be <em>audited</em>: every resolution names the claims it superseded, carries a
+    plain-language rationale, and is anchored in a Merkle root a citizen can check without
+    trusting the department. Run <code>geovax verify --out out/chennai_metro</code> and it either
+    reports <span class="mono">chain intact over 20 entries</span> or names the exact index where
+    it breaks.</p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Clause group 2 of 5 · ten datasets</div>
+  <h2>Every input the statement names</h2>
+  <p>An input with no real dataset behind it is an input with no evidence. Each row names the
+  actual data used, not a connector that would accept it.</p>
+  <div class="card">
+    <table>
+      <thead><tr><th>Named input</th><th class="st">Status</th><th>Real data behind it</th></tr></thead>
+      <tbody>
+        <tr><td class="cl">Drone imagery</td><td class="st"><span class="pill met">met</span></td>
+          <td>Real UAV flight from the OpenDroneMap UAVArena corpus, three independent photogrammetric reconstructions (ODM 3.0.0, Pix4D 4.4.10, Metashape 1.5.2). <code>ingest.tiles</code>.</td></tr>
+        <tr><td class="cl">Orthorectified imagery (ORI)</td><td class="st"><span class="pill met">met</span></td>
+          <td>ORI rebuilt from published XYZ pyramids into georeferenced COGs at <strong>0.051 m ground resolution</strong>; co-registration measured between reconstructions. <code>raster.cog</code>, <code>raster.coreg</code>.</td></tr>
+        <tr><td class="cl">DSM / DTM datasets</td><td class="st"><span class="pill met">met</span></td>
+          <td>Full DSM → DTM → nDSM → structures chain on a real calibrated float surface (Geobasis NRW DOM1, 1 m grid, orthometric). <strong>nDSM median 0.023 m</strong> — the derived ground sits on the ground. <em>Stated caveat: no Indian float DSM is openly available at this precision, and the platform's trust gate refused to treat a recovered colour ramp as elevation rather than invent one.</em></td></tr>
+        <tr><td class="cl">Existing cadastral maps</td><td class="st"><span class="pill met">met</span></td>
+          <td>Two independent real compilations: TNGIS statewide cadastre (6.02 M parcels) and NCSCM coastal cadastre (220,668). Both CC0-1.0. <code>ingest.vector</code>.</td></tr>
+        <tr><td class="cl">Revenue records</td><td class="st"><span class="pill met">met</span></td>
+          <td>Survey numbers, subdivision, LGD hierarchy and FMB flags carried as canonical attributes and used as join keys — <code>kide</code> → <code>survey_number</code> resolved by value profiling alone. <em>Caveat: attribute-level, from the cadastral layers; no live RoR/patta database was available to connect to.</em></td></tr>
+        <tr><td class="cl">Municipal GIS layers</td><td class="st"><span class="pill met">met</span></td>
+          <td>964,053 Greater Chennai Corporation footprints with ward, zone, locality, street; 55,810 in the AOI. Automatic crosswalk mapped 6 of 13 columns. <code>attributes.schema_match</code>.</td></tr>
+        <tr><td class="cl">Utility network data</td><td class="st"><span class="pill met">met</span></td>
+          <td>Chennai Metrowater transmission network as a real source, with dangle, undershoot and connectivity rules (<code>dangle_max_length_m 3.0</code>, <code>undershoot_tol_m 1.0</code>). <code>topology.validate</code>.</td></tr>
+        <tr><td class="cl">Ground truthing (GT)</td><td class="st"><span class="pill part">partial</span></td>
+          <td>The GCP model ladder and Baarda iterative data snooping are implemented and tested, and CE90 / LE90 / NSSDA reporting exists. <strong>No independent ground-truth campaign was available</strong>, so the estimators are exercised on control points rather than on a real survey. This is the single largest gap in the evaluation and it is first on the deployment path.</td></tr>
+        <tr><td class="cl">GNSS / CORS survey data</td><td class="st"><span class="pill part">partial</span></td>
+          <td>RINEX, NMEA and CSV readers are built and uncertainty is carried through to the evidence model; rule R-CTL-01 gives control precedence over every photogrammetric claim. <strong>No real CORS campaign output was obtainable</strong> — Survey of India CORS requires credentials this environment cannot get, catalogued and labelled rather than faked.</td></tr>
+        <tr><td class="cl">Building footprint datasets</td><td class="st"><span class="pill met">met</span></td>
+          <td>Three independent real sources: GCC municipal survey, Google Open Buildings v3 (the AI-generated extraction the statement names), and AMRUT/Bhuvan. <strong>The fifth configured layer returned zero features in this AOI and the run reports that as a completeness gap.</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Clause group 3 of 5 · seven capabilities</div>
+  <h2>Everything the solution must incorporate</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Named capability</th><th class="st">Status</th><th>Measured in this run</th></tr></thead>
+      <tbody>
+        <tr><td class="cl">AI/ML spatial matching</td><td class="st"><span class="pill met">met</span></td>
+          <td>Weak-supervised, self-trained gradient-boosted matcher. Blocking removed <strong>99.991%</strong> of 3.95 × 10⁹ possible pairs; 34,697 matches accepted at mean p = 0.999; 5-fold CV AUC <strong>1.0000</strong>, calibration error <strong>0.0002</strong>.</td></tr>
+        <tr><td class="cl">Automated topology correction</td><td class="st"><span class="pill met">met</span></td>
+          <td>731 repairs applied across the cadastral layers, <strong>0 refused within tolerance</strong>; anything beyond 5 m² overlap or 0.5 m snap escalates instead. Mean topological confidence <strong>0.9997</strong>.</td></tr>
+        <tr><td class="cl">Intelligent attribute mapping</td><td class="st"><span class="pill met">met</span></td>
+          <td>Four unseen schemas crosswalked with no configuration, on four signals. Middle-band candidates surfaced for review, not applied — <code>lgd_district_code → state_lgd</code> at 0.544 was correctly withheld.</td></tr>
+        <tr><td class="cl">Geo-referencing &amp; coordinate transformation</td><td class="st"><span class="pill met">met</span></td>
+          <td>Indian datum family (Everest 1830 / Kalianpur) with EPSG:7755 as a first-class target and EPSG:32644 as the measurement CRS; GCP ladder with blunder detection; every geometry reprojected per run. <code>crs.engine</code>, <code>crs.gcp</code>.</td></tr>
+        <tr><td class="cl">Change detection mechanisms</td><td class="st"><span class="pill met">met</span></td>
+          <td>106,648 typed discrepancies across both layer pairs, in cross-source mode rather than temporal — plus a raster change path with a <strong>measured</strong> false-positive floor from a null-change experiment.</td></tr>
+        <tr><td class="cl">Spatial conflict resolution framework</td><td class="st"><span class="pill met">met</span></td>
+          <td>Dempster–Shafer fusion with independence discounting over 558,294 claims; conflict mass retained rather than normalised away; statutory rule engine — <strong>R-GEO-01 fired 839 times</strong> to refuse fusion beyond 10 m.</td></tr>
+        <tr><td class="cl">Confidence scoring for integrated outputs</td><td class="st"><span class="pill met">met</span></td>
+          <td>Six explainable dimensions per feature, graded A–E. Composite mean <strong>0.587</strong>; weakest dimension named in the run record (source agreement, 0.335); grade split C 51,878 / D 54,199.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note brass">
+    <div class="t">The two clauses that decide whether this is a land-records platform</div>
+    <p>Conflict resolution and confidence are last in the statement and first in the design. When
+    four sources disagree about one boundary, something must decide and something must say how
+    sure it is. <strong>The platform never averages.</strong> It selects a boundary some surveyor
+    actually observed, by evidence — because an averaged boundary is attributable to no survey,
+    can be asked of no surveyor, and is indefensible in a dispute.</p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Clause group 4 of 5 · six outcomes</div>
+  <h2>What the final solution is judged on</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Stated outcome</th><th class="st">Status</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td class="cl">Reduce manual GIS integration effort</td><td class="st"><span class="pill met">met</span></td>
+          <td>106,077 features reconciled in <strong>241.6 s on 2 vCPU</strong>, unattended, with per-stage checkpoints. The manual equivalent is a GIS analyst reconciling parcel by parcel.</td></tr>
+        <tr><td class="cl">Improve accuracy and consistency</td><td class="st"><span class="pill met">met</span></td>
+          <td>Two undeclared systematic offsets recovered and removed (1.51 m @ 073°, 3.41 m @ 309°); topological consistency raised to 0.9997; 860 apparent mutations correctly suppressed as re-registration rather than raised.</td></tr>
+        <tr><td class="cl">Enable seamless inter-departmental exchange</td><td class="st"><span class="pill part">partial</span></td>
+          <td>OGC API - Features Part 1 is conformant and live — <code>/conformance</code>, <code>/collections</code>, <code>/collections/{id}/items</code> — so a department opens it in QGIS with no GEOVAX-specific code. <strong>The push side (subscription bus) is built but untested against a real second department</strong>, which is what "seamless" would actually require.</td></tr>
+        <tr><td class="cl">Accelerate cadastral finalization</td><td class="st"><span class="pill met">met</span></td>
+          <td>Finalisation is blocked by contested parcels. 42.7% of 36,987 conflicts close without a human; the remaining 21,192 are ranked by decision value and <strong>batched by cause into 2 groups</strong>, so one decision generalises across hundreds of cases.</td></tr>
+        <tr><td class="cl">Improve interoperability</td><td class="st"><span class="pill met">met</span></td>
+          <td>Open standards on every outbound path: OGC API - Features (ISO 19168-1), GeoJSON RFC 7946, CityJSON 1.1 for the LOD1 city model, Cloud Optimized GeoTIFF for raster, LGD codes as the join key.</td></tr>
+        <tr><td class="cl">Support standardized digital land governance</td><td class="st"><span class="pill met">met</span></td>
+          <td>DILRMP-conformant 14-character ULPIN with checksum and split/merge genealogy; DPDP-Act-aware PII handling (owner attributes absent from the feature API by construction, reachable only through a purpose-bound, ledger-logged endpoint); NAKSHA specification used as the confidence target.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Clause group 5 of 5 · ten suggested technologies</div>
+  <h2>The suggested stack, and where we declined it</h2>
+  <p>This list is latitude, not obligation — the statement calls it <em>suggested</em>. Breadth is
+  shown where it is real, and the two declines are deliberate engineering choices with reasons.</p>
+  <div class="card">
+    <table>
+      <thead><tr><th>Suggested</th><th class="st">Status</th><th>How, or why not</th></tr></thead>
+      <tbody>
+        <tr><td class="cl">Artificial Intelligence</td><td class="st"><span class="pill met">met</span></td><td>Evidence-theoretic decision layer: Dempster–Shafer belief and plausibility, statutory rule engine, adjudication ranking by decision value.</td></tr>
+        <tr><td class="cl">Machine Learning</td><td class="st"><span class="pill met">met</span></td><td>Weak supervision plus self-training over a gradient-boosted matcher; Beta posterior reliability updates from every officer decision.</td></tr>
+        <tr><td class="cl">GeoAI</td><td class="st"><span class="pill met">met</span></td><td>Google Open Buildings extraction consumed as a first-class source; footprint regularisation (52.3% fewer vertices, 106 correctly refused as non-rectilinear); LOD1 extrusion.</td></tr>
+        <tr><td class="cl">GIS &amp; Web-GIS</td><td class="st"><span class="pill met">met</span></td><td>Operator console at <code>/map</code> plus a Next.js web-GIS client with an end-to-end Playwright suite.</td></tr>
+        <tr><td class="cl">Spatial databases</td><td class="st"><span class="pill part">partial</span></td><td>Full PostGIS canonical schema, indexes and views (<code>db/schema.sql</code>, 443 lines) with loaders. <strong>The evaluation deliberately runs file-backed</strong> so a reviewer can reproduce it without standing up a database — so PostGIS is built and shipped, but it is not what produced these numbers.</td></tr>
+        <tr><td class="cl">ETL automation</td><td class="st"><span class="pill met">met</span></td><td>12-stage DAG with checkpointing and resume; a crashed run resumes rather than restarting, and partial state stays inspectable.</td></tr>
+        <tr><td class="cl">Computer vision</td><td class="st"><span class="pill met">met</span></td><td>Phase-correlation co-registration, progressive morphological ground filtering, structure extraction from height alone (328 structures, no imagery and no labels).</td></tr>
+        <tr><td class="cl">Cloud computing</td><td class="st"><span class="pill part">partial</span></td><td>Containerised and horizontally sized from single-ULB pilot to statewide, but <strong>deliberately deployable on-premises with no external service dependency at inference time</strong>. Land records are DPDP-governed data and a district office has neither guaranteed bandwidth nor an appetite for offshore processing. Cloud-native was declined, not missed.</td></tr>
+        <tr><td class="cl">Spatial analytics</td><td class="st"><span class="pill met">met</span></td><td>Moran's I spatial autocorrelation on residuals, CE90 / LE90 / NSSDA positional accuracy, per-ward and per-village quality rollups, development-control checks against TN CDBR 2019.</td></tr>
+        <tr><td class="cl">API integration frameworks</td><td class="st"><span class="pill met">met</span></td><td>FastAPI serving 40 endpoints: five OGC API - Features routes plus the platform API — adjudication, provenance, lineage, subscriptions, citizen verification, GatiShakti export.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Beyond the statement</div>
+  <h2>Eight things PS 26013 never asked for</h2>
+  <p>Overdelivery is only worth listing if it is running. Each of these is in the shipped tree
+  with an endpoint or a test behind it.</p>
+  <div class="card">
+    <table>
+      <tbody>
+        <tr><td class="cl">ULPIN genealogy</td><td>Split and merge lineage so a mutation never orphans an encumbrance history; checksum catches 100% of single-character errors. <code>core.ids</code></td></tr>
+        <tr><td class="cl">Merkle-anchored ledger</td><td>Inclusion proofs let a citizen verify their own record against a gazette-published root, independently of the department. <code>GET /api/citizen/verify/{ulpin}</code></td></tr>
+        <tr><td class="cl">Draft FMB generation</td><td>Geodesic polygon → G-line, perpendicular ladder offsets, F-lines → <strong>NIC CollabLand XML</strong> plus an SVG sketch in customary units, so state cadastral software can ingest it without redrawing. <code>cadastre.fmb</code>, <code>GET /api/fmb/{ulpin}</code></td></tr>
+        <tr><td class="cl">Litigation hotspot mapping</td><td>Dempster–Shafer conflict mass K fused with e-Courts/NJDG dispute records and encumbrance flags into a risk index, so a Collector can aim survey budget at contested ground. <code>analytics.litigation</code></td></tr>
+        <tr><td class="cl">LOD1 3-D city model</td><td>CityJSON 1.1 solids with measured height and storeys; FSI and ground-coverage checks against TN CDBR 2019 limits. <code>geoai.lod1</code></td></tr>
+        <tr><td class="cl">Encroachment intelligence</td><td>Change restricted to poramboke/government land, reported as findings for verification and never as determinations. Rule R-POR-01.</td></tr>
+        <tr><td class="cl">Area reconciliation in customary units</td><td>Acre-cent, ground, kuzhi, guntha, kanal, with recorded-versus-geodesic discrepancy as a first-class field.</td></tr>
+        <tr><td class="cl">Active-learning loop</td><td>Every adjudication becomes a training example and a reliability update, so the platform's accuracy is a function of how much it has been used.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section>
+  <div class="eyebrow">Scope</div>
+  <h2>What this record supports, stated as it should be said</h2>
+  <p>This record supports one sentence: <strong>on 22.3 km² of central Chennai, using five real
+  government layers and no synthetic data, the platform automatically integrated, harmonised and
+  validated 106,077 land features in 241.6 seconds on 2 vCPU, closed 42.7% of the conflicts
+  without a human, and published a per-feature confidence grade and an auditable reason for every
+  decision it made.</strong></p>
+  <p>It does not support a claim about accuracy against ground truth, because there is no ground
+  truth here to measure against. It does not support a claim about a second department receiving a
+  webhook, because none has. And it does not support any claim about title.</p>
+  <div class="note">
+    <div class="t">The six partial rows are the honest half of this document</div>
+    <p>Ground truthing and GNSS/CORS are partial because the real data requires credentials this
+    environment cannot obtain. Synchronisation and inter-departmental exchange are partial because
+    the far end of a webhook has to be a real department. Spatial databases and cloud are partial
+    by choice, and the choices are defended above. A conformance record with no partial rows is a
+    marketing document.</p>
+  </div>
+<pre><b># check the three claims that need no trust</b>
+geovax verify --out out/chennai_metro        <i># chain intact over 20 entries + Merkle root</i>
+curl -s localhost:8000/conformance | jq      <i># the OGC classes actually declared</i>
+python -m pytest tests/ -q                   <i># 130 test functions, seven modules</i></pre>
+</section>
+
+<footer>
+  <b>GEOVAX Conformance Record</b> — clauses extracted from the published text of problem
+  statement 26013; evidence read from <span class="mono">out/chennai_metro/metrics.json</span>
+  (run <span class="mono">d41789a8</span>, 2026-09-06 16:49 UTC) and from the shipped tree.
+  Team Perpetually Curious · SIH 2026 · Ministry of Rural Development, Department of Land Resources.
+</footer>
+
+</div>
+</body>
+</html>
