@@ -185,6 +185,7 @@ make test        # 81 tests
 | [`08-evaluation-results.md`](docs/08-evaluation-results.md) | Every measured number, and what the evaluation does not establish |
 | [`09-roadmap.md`](docs/09-roadmap.md) | Built vs designed-not-built, what a deployment needs next, and what would make it fail |
 | [`10-digital-twin-evidence-timeline.md`](docs/10-digital-twin-evidence-timeline.md) | The Land Digital Twin, Explainable AI Evidence and Temporal Land Intelligence views: what's real, what's derived, and the disclosed gaps |
+| [`11-risk-copilot-graph-whatif.md`](docs/11-risk-copilot-graph-whatif.md) | Parcel Risk Score, AI Survey Priority Queue, AI Adjudication Copilot, the Evidence/Provenance Graph, and What-If Land Impact Analysis — including the real performance numbers before and after optimisation |
 
 ---
 

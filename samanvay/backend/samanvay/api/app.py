@@ -44,7 +44,7 @@ from ..cadastre.fmb import generate_fmb, to_collabland_xml, to_fmb_svg
 from ..analytics.litigation import build_litigation_hotspots, calculate_litigation_risk
 from .auth import Role, UserClaims, USER_DIRECTORY, get_current_user, require_roles, sign_token
 from .services import KafkaEventBus, SubscriptionRegistry, cache_service, kafka_bus, opensearch_service
-from . import twin
+from . import copilot, graph, risk, twin, whatif
 from ..geoai.sam_extractor import SAMFeatureExtractor
 
 logger = logging.getLogger(__name__)
@@ -1101,6 +1101,113 @@ def create_app(out_dir: str = "out/chennai_metro") -> FastAPI:
         result = twin.parcel_timeline(store, ulpin, _real_provenance_entries(store))
         if result is None:
             raise HTTPException(404, f"no harmonised parcel found for ulpin {ulpin!r}")
+        return result
+
+    @app.get("/api/risk/queue", tags=["platform"])
+    def risk_queue(
+        collection: str = Query("parcels", description="'parcels' or 'buildings'"),
+        ward: str | None = None,
+        zone: str | None = None,
+        min_score: float = Query(0.0, ge=0.0, le=100.0),
+        limit: int = Query(100, ge=1, le=5000),
+        offset: int = Query(0, ge=0),
+    ) -> dict[str, Any]:
+        """AI Survey Priority Queue: real harmonised records ranked by deterministic risk
+        score, highest first — the same score `GET /api/risk/{ulpin}` computes for one
+        record, applied here at collection scale (`risk.rank_parcels` is O(1) per record, no
+        per-record adjudication/change lookups, so it stays fast at 218k+ parcels).
+        """
+        if collection not in ("parcels", "buildings"):
+            raise HTTPException(400, "collection must be 'parcels' or 'buildings'")
+        cache_key = f"risk_queue:{collection}:{ward}:{zone}:{min_score}:{limit}:{offset}"
+        cached = cache_service.get(cache_key)
+        if cached:
+            return cached
+        feats = store.collections.get(collection, [])
+        result = risk.rank_parcels(feats, ward=ward, zone=zone, min_score=min_score,
+                                    limit=limit, offset=offset)
+        cache_service.set(cache_key, result, ttl_seconds=60)
+        return result
+
+    @app.get("/api/risk/{identifier}", tags=["platform"])
+    def risk_score(identifier: str) -> dict[str, Any]:
+        """Parcel Risk Score: a deterministic 0-100 score for one real harmonised parcel or
+        building (`identifier` is a ULPIN or an entity_id), with the full factor breakdown
+        (see `api/risk.py` for the exact, documented weights). Unlike the bulk survey-
+        priority queue, this single-record view also checks for a real linked change record
+        and the source types of its contributing datasets, for a fuller (if slower) picture.
+        """
+        parcels = store.collections.get("parcels", [])
+        buildings = store.collections.get("buildings", [])
+        record = twin.find_by_identifier(parcels, identifier)
+        if record is None:
+            record = twin.find_by_identifier(buildings, identifier)
+        if record is None:
+            raise HTTPException(404, f"no harmonised parcel or building found for {identifier!r}")
+        props = record.get("properties", {})
+        entries = _real_provenance_entries(store)
+        dataset_source_types = {
+            e["dataset_id"]: e.get("source_type") for e in entries if e.get("dataset_id")
+        }
+        linked_changes = twin.link_changes(record, store.changes())
+        result = risk.parcel_risk(
+            props, linked_changes=linked_changes, dataset_source_types=dataset_source_types,
+        )
+        return {
+            "ulpin": props.get("ulpin"), "entity_id": props.get("entity_id"),
+            **result,
+        }
+
+    @app.get("/api/copilot/recommend", tags=["platform"])
+    def copilot_recommend(case_id: str | None = None, ulpin: str | None = None) -> dict[str, Any]:
+        """AI Adjudication Copilot: an evidence-based ACCEPT_SOURCE / NEED_FIELD_SURVEY /
+        ESCALATE recommendation for one real, open adjudication case — never an
+        authoritative decision (see `api/copilot.py`'s module docstring and the
+        `disclaimer`/`is_automated_recommendation` fields on every response). Reuses the
+        exact same statutory-rule precedence table and confidence thresholds
+        `conflict/resolver.py::ConflictResolver` itself uses, over the real
+        Dempster-Shafer evidence already in `adjudication_queue.json` — nothing here is a
+        second, independently-tuned decision model.
+        """
+        briefs = store.queue()
+        matched = next((b for b in briefs if b.get("case_id") == case_id), None)
+        if not matched and ulpin:
+            matched = next(
+                (b for b in briefs if str(b.get("ulpin") or b.get("entity_id") or "") == ulpin),
+                None,
+            )
+        if not matched:
+            raise HTTPException(404, "No matching open adjudication case found for the given case_id/ulpin.")
+        return copilot.recommend_for_case(matched)
+
+    @app.get("/api/graph/{identifier}", tags=["platform"])
+    def evidence_graph(identifier: str) -> dict[str, Any]:
+        """Evidence/Provenance Graph: FINAL PARCEL/BUILDING -> DECISION -> CONFLICT/MATCH ->
+        SOURCE FEATURE CLAIMS -> DATASET -> AUTHORITY, as an explicit node/edge structure
+        composed entirely from `GET /api/evidence/{identifier}`'s already-real output (see
+        `api/graph.py` — no new computation, no fabricated relationship).
+        """
+        result = graph.provenance_graph(store, identifier, _real_provenance_entries(store))
+        if result is None:
+            raise HTTPException(404, f"no harmonised parcel or building found for {identifier!r}")
+        return result
+
+    @app.post("/api/whatif/simulate", tags=["platform"])
+    async def whatif_simulate(request: Request) -> dict[str, Any]:
+        """What-If Land Impact Analysis: evaluate a proposed geometry (a redrawn boundary, a
+        footprint pending acceptance) against this run's real published parcels, buildings,
+        utilities and open adjudication cases — a simulation only, never applied to any
+        record (see `api/whatif.py`). Body: `{"geometry": <GeoJSON geometry>,
+        "feature_class": "parcel"|"building" (optional, default "parcel")}`.
+        """
+        body = await request.json()
+        geometry = body.get("geometry")
+        if not geometry:
+            raise HTTPException(400, "request body must include a GeoJSON 'geometry'")
+        feature_class = body.get("feature_class", "parcel")
+        result = whatif.simulate(store, geometry, feature_class=feature_class)
+        if "error" in result:
+            raise HTTPException(400, result["error"])
         return result
 
     @app.get("/api/verify", tags=["platform"])

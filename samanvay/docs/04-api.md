@@ -157,6 +157,53 @@ record linkable to the parcel or its buildings by a shared raw source identifier
 `{"available": false, "reason": "..."}` — never a fabricated history — when a run's outputs
 carry no temporal signal for the parcel.
 
+### `GET /api/risk/queue?collection=&ward=&zone=&min_score=&limit=&offset=`
+
+AI Survey Priority Queue: real harmonised parcels or buildings, ranked by the same
+deterministic risk score `/api/risk/{identifier}` computes, highest first. Purely a function
+of fields already on each record — no per-record conflict/change lookup — so it stays fast
+at full-run scale (measured ~11 s cold / instant cached at 218k parcels and 1.4M buildings on
+the `chennai_metro` run; cached 60 s, same as `/collections/{id}/items`).
+
+### `GET /api/risk/{identifier}`
+
+Parcel Risk Score: a deterministic 0-100 score for one real parcel or building (`identifier`
+is a ULPIN or an `entity_id`), with a factor-by-factor breakdown (positional, source
+agreement, topological, conflict density, attribute completeness, corroboration, temporal
+currency, lineage integrity — see `api/risk.py` for the exact, documented weights). Unlike
+the bulk queue above, this single-record view also checks for a real linked change record
+and the source types of contributing datasets, adding a documented bonus when an unresolved
+conflict involves a ground-truth/GNSS-CORS source.
+
+### `GET /api/copilot/recommend?case_id=&ulpin=`
+
+AI Adjudication Copilot: an `ACCEPT_SOURCE` / `NEED_FIELD_SURVEY` / `ESCALATE`
+recommendation for one real, open adjudication case, reasoned strictly from that case's own
+evidence (source-type domain precedence, Dempster-Shafer weight margins, fused belief/
+uncertainty, severity) using the exact `PRECEDENCE` table and `ResolverConfig` thresholds
+`conflict/resolver.py::ConflictResolver` itself uses. Every response carries
+`is_automated_recommendation: true` and a `disclaimer` naming
+`POST /api/adjudication/resolve` as the only authoritative decision path — this is a
+recommendation, never a decision.
+
+### `GET /api/graph/{identifier}`
+
+Evidence/Provenance Graph: `FINAL PARCEL/BUILDING -> DECISION -> CONFLICT/MATCH -> SOURCE
+FEATURE CLAIMS -> DATASET -> AUTHORITY` as an explicit node/edge structure, composed entirely
+from `GET /api/evidence/{identifier}`'s already-real output — no new computation, and a
+`CONFLICT` node appears only when a real case was found within that endpoint's disclosed
+geometric-match threshold.
+
+### `POST /api/whatif/simulate`
+
+What-If Land Impact Analysis: evaluate a proposed geometry (a redrawn boundary, a footprint
+pending acceptance) against this run's real published parcels, buildings, utilities and open
+adjudication cases. Body: `{"geometry": <GeoJSON geometry>, "feature_class": "parcel" |
+"building"}`. Returns real intersection areas in square metres (only the intersecting
+candidates are reprojected to the appropriate local UTM zone — see `api/whatif.py`), always
+labelled `"simulation": true` / `"authoritative_change_applied": false`. Nothing is ever
+written; a 400 is returned for an invalid, empty, or out-of-range geometry.
+
 ### `GET /api/verify`
 
 Verifies the hash chain and returns the Merkle root, plus — deliberately — the exact recipe

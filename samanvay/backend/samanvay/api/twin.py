@@ -98,7 +98,7 @@ CONFIDENCE_DIMENSIONS = (
 # --------------------------------------------------------------------------------------
 
 
-def _split_datasets(value: Any) -> list[str]:
+def split_datasets(value: Any) -> list[str]:
     """``contributing_datasets`` is comma-joined in the GeoJSON file store and may already
     be a list from a Postgres ``text[]`` column — accept either without assuming one."""
     if isinstance(value, list):
@@ -286,12 +286,12 @@ def digital_twin(store: Any, ulpin: str, provenance_entries: list[dict[str, Any]
     entries_by_id = index_provenance(provenance_entries)
 
     dataset_roles: dict[str, set[str]] = {}
-    for d in _split_datasets(props.get("contributing_datasets")):
+    for d in split_datasets(props.get("contributing_datasets")):
         dataset_roles.setdefault(d, set()).add("parcel boundary/attributes")
     for b in linked_buildings:
         bprops = b.get("properties", {})
         label = f"building {bprops.get('entity_id')}"
-        for d in _split_datasets(bprops.get("contributing_datasets")):
+        for d in split_datasets(bprops.get("contributing_datasets")):
             dataset_roles.setdefault(d, set()).add(label)
 
     linked_datasets = []
@@ -411,7 +411,7 @@ def evidence_object(store: Any, identifier: str, provenance_entries: list[dict[s
     props = record.get("properties", {})
     entries_by_id = index_provenance(provenance_entries)
     registry = build_source_registry(provenance_entries)
-    contributing = _split_datasets(props.get("contributing_datasets"))
+    contributing = split_datasets(props.get("contributing_datasets"))
 
     confidence_block = None
     report = _confidence_report_from_properties(props)
@@ -510,9 +510,9 @@ def parcel_timeline(store: Any, ulpin: str, provenance_entries: list[dict[str, A
     linked_buildings = find_buildings_for_parcel(buildings, ulpin)
     entries_by_id = index_provenance(provenance_entries)
 
-    dataset_ids: set[str] = set(_split_datasets(props.get("contributing_datasets")))
+    dataset_ids: set[str] = set(split_datasets(props.get("contributing_datasets")))
     for b in linked_buildings:
-        dataset_ids.update(_split_datasets(b.get("properties", {}).get("contributing_datasets")))
+        dataset_ids.update(split_datasets(b.get("properties", {}).get("contributing_datasets")))
 
     events: list[dict[str, Any]] = []
 

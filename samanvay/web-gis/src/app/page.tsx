@@ -131,7 +131,26 @@ export default function WebGISPage() {
   const [parcelTwin, setParcelTwin] = useState<any | null>(null);
   const [parcelEvidence, setParcelEvidence] = useState<any | null>(null);
   const [parcelTimeline, setParcelTimeline] = useState<any | null>(null);
+  const [parcelRisk, setParcelRisk] = useState<any | null>(null);
+  const [parcelGraph, setParcelGraph] = useState<any | null>(null);
   const [twinStatus, setTwinStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  // AI Adjudication Copilot recommendation for whichever adjudication case is geometrically
+  // linked to the selected parcel (parcelEvidence.conflicting_sources.linked_case) — a
+  // second, on-demand fetch keyed off that case_id once evidence has loaded, since the
+  // recommendation is a distinct real endpoint (GET /api/copilot/recommend), not something
+  // /api/evidence itself computes.
+  const [copilotRecommendation, setCopilotRecommendation] = useState<any | null>(null);
+  // What-If Land Impact Analysis: the officer edits/accepts this real GeoJSON geometry
+  // (pre-filled with the selected parcel's own geometry — never a fabricated default) and
+  // runs it against POST /api/whatif/simulate. null result means "not run yet", not "no
+  // impact" — the UI must not conflate the two.
+  const [whatifGeometryText, setWhatifGeometryText] = useState<string>('');
+  const [whatifResult, setWhatifResult] = useState<any | null>(null);
+  const [whatifStatus, setWhatifStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [whatifError, setWhatifError] = useState<string | null>(null);
+  // AI Survey Priority Queue for the currently selected ward — top real risk-ranked
+  // parcels from GET /api/risk/queue, fetched alongside the other ward-scoped Dossier data.
+  const [surveyPriorityQueue, setSurveyPriorityQueue] = useState<any | null>(null);
   const [isResolving, setIsResolving] = useState(false);
   const [wardParcels, setWardParcels] = useState<any[]>([]);
   const [wardStats, setWardStats] = useState<any>({
@@ -517,6 +536,41 @@ export default function WebGISPage() {
       }
     } catch (err) {
       console.error('Failed fetching FMB data', err);
+    }
+  };
+
+  // What-If Land Impact Analysis: run the officer's (possibly edited) proposed geometry
+  // against POST /api/whatif/simulate. A parse error is shown honestly rather than silently
+  // ignored — this must never fall back to a fabricated or previous result.
+  const runWhatifSimulation = async () => {
+    setWhatifError(null);
+    let geometry: any;
+    try {
+      geometry = JSON.parse(whatifGeometryText);
+    } catch (err) {
+      setWhatifError('Proposed geometry is not valid JSON.');
+      return;
+    }
+    setWhatifStatus('loading');
+    setWhatifResult(null);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/whatif/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ geometry, feature_class: 'parcel' }),
+      });
+      if (res.ok) {
+        setWhatifResult(await res.json());
+        setWhatifStatus('idle');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setWhatifError(body.detail || `Simulation request failed (HTTP ${res.status}).`);
+        setWhatifStatus('error');
+      }
+    } catch (err) {
+      console.error('What-if simulation failed', err);
+      setWhatifError('Could not reach the simulation service.');
+      setWhatifStatus('error');
     }
   };
 
@@ -1238,17 +1292,42 @@ export default function WebGISPage() {
     if (geoaiSrc) geoaiSrc.setData({ type: 'FeatureCollection', features: [] });
   }, [selectedWard, currentUser, authReady]);
 
-  // Fetch the real Digital Twin, Explainable Evidence and Temporal Timeline for whichever
-  // parcel is selected. `cancelled` discards a response that lands after the user has
-  // already moved on to a different parcel (or cleared the selection) — the same race the
-  // ward-level updateMapDataToken guards against, scoped here to a single parcel fetch.
+  // AI Survey Priority Queue for the selected ward — real risk-ranked parcels from
+  // GET /api/risk/queue, the same score computed per-parcel in the Telemetry tab. Cleared
+  // (not left stale) on every ward change, and discarded if a later ward change's response
+  // lands after this one — the same stale-response guard used throughout this file.
+  useEffect(() => {
+    if (!authReady) return;
+    let cancelled = false;
+    setSurveyPriorityQueue(null);
+    if (selectedWard.id !== 'all') {
+      fetch(`http://127.0.0.1:8000/api/risk/queue?ward=${encodeURIComponent(selectedWard.id)}&limit=8`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => { if (!cancelled) setSurveyPriorityQueue(data); })
+        .catch((err) => console.error('Survey priority queue fetch failed', err));
+    }
+    return () => { cancelled = true; };
+  }, [selectedWard, authReady]);
+
+  // Fetch the real Digital Twin, Explainable Evidence, Temporal Timeline, Risk Score and
+  // Evidence/Provenance Graph for whichever parcel is selected. `cancelled` discards a
+  // response that lands after the user has already moved on to a different parcel (or
+  // cleared the selection) — the same race the ward-level updateMapDataToken guards
+  // against, scoped here to a single parcel fetch.
   useEffect(() => {
     const ulpin = selectedParcel?.ulpin;
     if (!ulpin) {
       setParcelTwin(null);
       setParcelEvidence(null);
       setParcelTimeline(null);
+      setParcelRisk(null);
+      setParcelGraph(null);
       setTwinStatus('idle');
+      setCopilotRecommendation(null);
+      setWhatifGeometryText('');
+      setWhatifResult(null);
+      setWhatifStatus('idle');
+      setWhatifError(null);
       return;
     }
     let cancelled = false;
@@ -1256,21 +1335,45 @@ export default function WebGISPage() {
     setParcelTwin(null);
     setParcelEvidence(null);
     setParcelTimeline(null);
+    setParcelRisk(null);
+    setParcelGraph(null);
+    setCopilotRecommendation(null);
+    setWhatifResult(null);
+    setWhatifStatus('idle');
+    setWhatifError(null);
     const encoded = encodeURIComponent(ulpin);
     Promise.all([
       fetch(`http://127.0.0.1:8000/api/twin/${encoded}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`http://127.0.0.1:8000/api/evidence/${encoded}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`http://127.0.0.1:8000/api/timeline/${encoded}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`http://127.0.0.1:8000/api/risk/${encoded}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`http://127.0.0.1:8000/api/graph/${encoded}`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([twinData, evidenceData, timelineData]) => {
+      .then(([twinData, evidenceData, timelineData, riskData, graphData]) => {
         if (cancelled) return;
         setParcelTwin(twinData);
         setParcelEvidence(evidenceData);
         setParcelTimeline(timelineData);
+        setParcelRisk(riskData);
+        setParcelGraph(graphData);
         setTwinStatus('idle');
+        // Pre-fill the What-If textarea with the parcel's own real geometry — an honest
+        // starting point an officer can edit, never a fabricated default.
+        if (twinData?.parcel?.geometry) {
+          setWhatifGeometryText(JSON.stringify(twinData.parcel.geometry, null, 2));
+        }
+        // If evidence found a real, geometrically-linked adjudication case, fetch the
+        // Copilot's evidence-based recommendation for that specific case.
+        const caseId = evidenceData?.conflicting_sources?.linked_case?.case_id;
+        if (caseId) {
+          fetch(`http://127.0.0.1:8000/api/copilot/recommend?case_id=${encodeURIComponent(caseId)}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((rec) => { if (!cancelled) setCopilotRecommendation(rec); })
+            .catch((err) => console.error('Copilot recommendation fetch failed', err));
+        }
       })
       .catch((err) => {
-        console.error('Digital twin/evidence/timeline fetch failed', err);
+        console.error('Digital twin/evidence/timeline/risk/graph fetch failed', err);
         if (!cancelled) setTwinStatus('error');
       });
     return () => {
@@ -2557,6 +2660,58 @@ export default function WebGISPage() {
                   ))}
                 </div>
               </div>
+
+              {/* AI Survey Priority Queue — real risk-ranked parcels for this ward, from
+                  GET /api/risk/queue. Reuses the exact same clickable-list idiom as
+                  "Surveyed Parcels" above. */}
+              {selectedWard.id !== 'all' && (
+                <div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1a4480', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    AI Survey Priority Queue {surveyPriorityQueue ? `(${surveyPriorityQueue.total_matching} scored)` : ''}
+                  </div>
+                  <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid #dfe1e2', borderRadius: '4px', background: '#f4f6f9' }}>
+                    {!surveyPriorityQueue && (
+                      <div style={{ padding: '8px', color: '#565c65', fontSize: '0.72rem' }}>Ranking real parcels by risk score…</div>
+                    )}
+                    {surveyPriorityQueue?.items.length === 0 && (
+                      <div style={{ padding: '8px', color: '#565c65', fontSize: '0.72rem' }}>No parcels found for this ward's real risk-scored data.</div>
+                    )}
+                    {surveyPriorityQueue?.items.map((item: any) => (
+                      <div
+                        key={item.ulpin || item.entity_id}
+                        onClick={() => {
+                          const match = wardParcels.find((p) => p.ulpin === item.ulpin);
+                          setSelectedParcel(match || { ulpin: item.ulpin, entity_id: item.entity_id });
+                          setRightPanelTab('parcel');
+                        }}
+                        style={{
+                          padding: '8px', borderBottom: '1px solid #e0e0e0', cursor: 'pointer',
+                          background: selectedParcel?.ulpin === item.ulpin ? '#e1f3f8' : '#ffffff',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#005ea2' }}>
+                            #{item.priority_rank} · {item.survey_number ? `Survey ${item.survey_number}` : item.ulpin}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: '#565c65' }}>
+                            {item.top_risk_factors[0]?.meaning}
+                          </div>
+                        </div>
+                        <span style={{
+                          padding: '2px 6px', fontSize: '0.7rem', fontWeight: 700, borderRadius: '3px',
+                          background: item.risk_band === 'CRITICAL' || item.risk_band === 'HIGH' ? '#f8dfe2'
+                            : item.risk_band === 'MEDIUM' ? '#fff1d2' : '#ecf3ec',
+                          color: item.risk_band === 'CRITICAL' || item.risk_band === 'HIGH' ? '#d83933'
+                            : item.risk_band === 'MEDIUM' ? '#8c5b00' : '#00a91c',
+                        }}>
+                          {item.risk_score.toFixed(1)} · {item.risk_band}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2773,6 +2928,56 @@ export default function WebGISPage() {
                     </div>
                   </div>
 
+                  {/* Parcel Risk Score — deterministic 0-100 score with a factor-by-factor
+                      breakdown, from GET /api/risk/{ulpin}. Band colour reuses the app's
+                      existing semantic palette (danger/warning/success), not a new one. */}
+                  <div style={{ marginTop: '12px', border: '1px solid #1a4480', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    <div style={{ background: '#1a4480', color: '#fff', padding: '6px 8px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Parcel Risk Score</span>
+                      {parcelRisk && (
+                        <span style={{
+                          background: parcelRisk.band === 'CRITICAL' || parcelRisk.band === 'HIGH' ? '#d83933'
+                            : parcelRisk.band === 'MEDIUM' ? '#ffb700' : '#00a91c',
+                          color: parcelRisk.band === 'MEDIUM' ? '#1b1b1b' : '#fff',
+                          padding: '1px 8px', borderRadius: '10px', fontSize: '0.68rem',
+                        }}>
+                          {parcelRisk.score.toFixed(1)} · {parcelRisk.band}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {twinStatus === 'loading' && (
+                        <span style={{ color: '#565c65' }}>Computing risk score…</span>
+                      )}
+                      {parcelRisk && (
+                        <>
+                          {parcelRisk.factors
+                            .slice()
+                            .sort((a: any, b: any) => b.contribution - a.contribution)
+                            .map((f: any) => (
+                              <div key={f.name} style={{ borderTop: '1px solid #e6e6e6', padding: '3px 0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span style={{ textTransform: 'capitalize' }}>{f.name.replace(/_/g, ' ')}</span>
+                                  <strong>+{f.contribution.toFixed(1)} pts</strong>
+                                </div>
+                                <div style={{ color: '#565c65', fontSize: '0.65rem' }}>{f.meaning}</div>
+                              </div>
+                            ))}
+                          {parcelRisk.gt_gnss_conflict_bonus_applied && (
+                            <div style={{ background: '#fdf1f1', border: '1px solid #f0c6c4', borderRadius: '3px', padding: '4px', color: '#d83933', fontSize: '0.68rem', marginTop: '2px' }}>
+                              {parcelRisk.gt_gnss_conflict_bonus_reason}
+                            </div>
+                          )}
+                          {parcelRisk.temporal_change_note && (
+                            <div style={{ color: '#565c65', fontSize: '0.65rem', fontStyle: 'italic', marginTop: '2px' }}>
+                              {parcelRisk.temporal_change_note}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Land Digital Twin — real linked buildings + contributing-dataset
                       provenance for this parcel, from GET /api/twin/{ulpin}. */}
                   <div style={{ marginTop: '12px', border: '1px solid #1a4480', borderRadius: '4px', fontSize: '0.75rem' }}>
@@ -2891,6 +3096,26 @@ export default function WebGISPage() {
                               <div style={{ fontSize: '0.62rem', color: '#8c5b00', marginTop: '3px', fontStyle: 'italic' }}>
                                 {parcelEvidence.conflicting_sources.linked_case.matched_by}
                               </div>
+                              {copilotRecommendation && (
+                                <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #f0c6c4' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 700, color: '#1a4480', fontSize: '0.68rem', textTransform: 'uppercase' }}>AI Adjudication Copilot</span>
+                                    <span style={{
+                                      background: copilotRecommendation.recommendation === 'ACCEPT_SOURCE' ? '#00a91c'
+                                        : copilotRecommendation.recommendation === 'NEED_FIELD_SURVEY' ? '#ffb700' : '#565c65',
+                                      color: copilotRecommendation.recommendation === 'NEED_FIELD_SURVEY' ? '#1b1b1b' : '#fff',
+                                      padding: '1px 6px', borderRadius: '8px', fontSize: '0.62rem', fontWeight: 700,
+                                    }}>
+                                      {copilotRecommendation.recommendation.replace(/_/g, ' ')}
+                                      {copilotRecommendation.recommended_dataset ? `: ${copilotRecommendation.recommended_dataset}` : ''}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '0.65rem', color: '#1b1b1b', marginTop: '3px' }}>{copilotRecommendation.rationale}</div>
+                                  <div style={{ fontSize: '0.6rem', color: '#8c5b00', marginTop: '3px', fontStyle: 'italic' }}>
+                                    {copilotRecommendation.disclaimer}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div style={{ color: '#565c65', fontSize: '0.68rem' }}>{parcelEvidence.conflicting_sources.note}</div>
@@ -2941,6 +3166,115 @@ export default function WebGISPage() {
                             {parcelTimeline.note}
                           </div>
                         </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Evidence / Provenance Graph — FINAL PARCEL/BUILDING -> DECISION ->
+                      CONFLICT/MATCH -> SOURCE FEATURE CLAIMS -> DATASET -> AUTHORITY, from
+                      GET /api/graph/{ulpin}. Rendered as a grouped, indented chain rather
+                      than a canvas graph, to stay within the app's existing visual
+                      language (no new charting/graph library). */}
+                  <div style={{ marginTop: '12px', border: '1px solid #1a4480', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    <div style={{ background: '#1a4480', color: '#fff', padding: '6px 8px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Evidence &amp; Provenance Chain
+                    </div>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      {twinStatus === 'loading' && (
+                        <span style={{ color: '#565c65' }}>Assembling provenance chain…</span>
+                      )}
+                      {parcelGraph && (
+                        <>
+                          {(['parcel', 'building', 'decision', 'conflict', 'source_feature_claim', 'dataset', 'authority'] as const).map((nodeType) => {
+                            const nodesOfType = parcelGraph.nodes.filter((n: any) => n.type === nodeType);
+                            if (nodesOfType.length === 0) return null;
+                            const indent = { parcel: 0, building: 0, decision: 8, conflict: 16, source_feature_claim: 24, dataset: 32, authority: 40 }[nodeType];
+                            return (
+                              <div key={nodeType} style={{ marginLeft: `${indent}px`, borderLeft: indent > 0 ? '2px solid #dfe1e2' : 'none', paddingLeft: indent > 0 ? '6px' : 0 }}>
+                                <div style={{ fontSize: '0.62rem', color: '#565c65', textTransform: 'uppercase', fontWeight: 700 }}>{nodeType.replace(/_/g, ' ')}</div>
+                                {nodesOfType.map((n: any) => (
+                                  <div key={n.id} style={{ fontSize: '0.68rem', color: '#1b1b1b', padding: '1px 0' }}>{n.label}</div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                          <div style={{ borderTop: '1px solid #e6e6e6', marginTop: '4px', paddingTop: '4px', color: '#565c65', fontSize: '0.65rem', fontStyle: 'italic' }}>
+                            {parcelGraph.scope_note}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* What-If Land Impact Analysis — real spatial simulation against this
+                      run's published collections via POST /api/whatif/simulate. Pre-filled
+                      with this parcel's own real geometry; editable before running. Never
+                      modifies any record — every result is explicitly labelled a
+                      simulation. */}
+                  <div style={{ marginTop: '12px', border: '1px solid #1a4480', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    <div style={{ background: '#1a4480', color: '#fff', padding: '6px 8px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      What-If Land Impact Analysis
+                    </div>
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ color: '#565c65', fontSize: '0.65rem' }}>
+                        Proposed geometry (GeoJSON) — edit to test a boundary change, or run as-is to see this parcel's own current impact footprint:
+                      </div>
+                      <textarea
+                        value={whatifGeometryText}
+                        onChange={(e) => setWhatifGeometryText(e.target.value)}
+                        rows={5}
+                        style={{ fontFamily: 'monospace', fontSize: '0.65rem', border: '1px solid #dfe1e2', borderRadius: '3px', padding: '4px', resize: 'vertical' }}
+                      />
+                      {whatifError && (
+                        <div style={{ color: '#d83933', fontSize: '0.68rem' }}>{whatifError}</div>
+                      )}
+                      <button
+                        onClick={runWhatifSimulation}
+                        disabled={whatifStatus === 'loading'}
+                        style={{
+                          background: '#1a4480', color: '#fff', border: 'none', padding: '6px',
+                          borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700,
+                          cursor: whatifStatus === 'loading' ? 'default' : 'pointer',
+                          opacity: whatifStatus === 'loading' ? 0.6 : 1,
+                        }}
+                      >
+                        {whatifStatus === 'loading' ? 'Running simulation…' : 'Run Simulation'}
+                      </button>
+                      {whatifResult && (
+                        <div style={{ borderTop: '1px solid #e6e6e6', paddingTop: '6px' }}>
+                          <div style={{ background: '#fff9e6', border: '1px solid #ffe699', color: '#8c5b00', fontSize: '0.65rem', padding: '4px', borderRadius: '3px', marginBottom: '4px', fontWeight: 700 }}>
+                            SIMULATION ONLY — no record was created, modified, or deleted.
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                            <span style={{ color: '#565c65' }}>Proposed area:</span>
+                            <strong>{whatifResult.proposed_geometry_area_m2.toLocaleString()} m²</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                            <span style={{ color: '#565c65' }}>Affected parcels:</span>
+                            <strong>{whatifResult.affected_parcels.count}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                            <span style={{ color: '#565c65' }}>Affected buildings:</span>
+                            <strong>{whatifResult.affected_buildings.count}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+                            <span style={{ color: '#565c65' }}>Open adjudication cases affected:</span>
+                            <strong>{whatifResult.affected_open_adjudication_cases.count}</strong>
+                          </div>
+                          {whatifResult.nearby_utilities.length > 0 && (
+                            <div style={{ marginTop: '4px' }}>
+                              <div style={{ fontWeight: 700, color: '#1a4480', fontSize: '0.65rem' }}>Nearby utilities</div>
+                              {whatifResult.nearby_utilities.map((u: any, i: number) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#565c65' }}>
+                                  <span>{u.feature}</span><strong>{u.approx_distance_m} m</strong>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{ color: '#565c65', fontSize: '0.62rem', fontStyle: 'italic', marginTop: '4px' }}>
+                            {whatifResult.note}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
